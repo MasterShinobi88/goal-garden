@@ -37,13 +37,18 @@ export const COMPANY_TAGLINE =
   "Eco essentials, free tools, and a cleaner tide — by BambooTide.";
 
 /**
- * Checkout URL for Lemon Squeezy / Stripe (subscription product).
- * Set NEXT_PUBLIC_PREMIUM_CHECKOUT_URL in Netlify when the product is live.
+ * Optional static Payment Link (Dashboard → Payment links).
+ * Prefer server Checkout via POST /api/stripe/checkout (STRIPE_SECRET_KEY).
  */
 export function getPremiumCheckoutUrl(): string | null {
   const url = process.env.NEXT_PUBLIC_PREMIUM_CHECKOUT_URL?.trim();
   if (url && /^https:\/\//i.test(url)) return url;
   return null;
+}
+
+/** Client-visible: secret key is never exposed; we only know if Checkout API is intended. */
+export function prefersStripeCheckoutApi(): boolean {
+  return process.env.NEXT_PUBLIC_STRIPE_CHECKOUT === "true";
 }
 
 export function premiumMarketingUrl() {

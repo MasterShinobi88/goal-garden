@@ -2,6 +2,8 @@
 
 Yes — a **subscription** is better if you need ongoing support. One-time sales don’t fund continuous work.
 
+**Full Stripe wiring (API + webhook):** see [STRIPE-SETUP.md](./STRIPE-SETUP.md).
+
 ## Product settings (Stripe or Lemon)
 
 | Field | Value |

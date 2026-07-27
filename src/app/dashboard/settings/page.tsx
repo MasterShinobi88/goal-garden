@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import {
   Bell,
   Check,
@@ -46,6 +46,15 @@ export default function SettingsPage() {
 
   useEffect(() => {
     setPrefs(loadPrefs());
+  }, []);
+
+  // Stripe returns here with ?checkout=success|cancel — open Premium tab
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const q = new URLSearchParams(window.location.search);
+    if (q.get("checkout") || q.get("session_id")) {
+      setTab("premium");
+    }
   }, []);
 
   function update<K extends keyof UserPreferences>(
@@ -95,7 +104,13 @@ export default function SettingsPage() {
       <div className="min-h-0 flex-1 overflow-y-auto pb-4 lg:pb-2">
         {tab === "premium" && (
           <div className="space-y-4">
-            <PremiumLicenseCard />
+            <Suspense
+              fallback={
+                <div className="card p-5 text-sm text-muted">Loading Premium…</div>
+              }
+            >
+              <PremiumLicenseCard />
+            </Suspense>
           </div>
         )}
 

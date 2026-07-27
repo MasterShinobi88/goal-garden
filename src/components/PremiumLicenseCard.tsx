@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Crown, ExternalLink, KeyRound, Sparkles, Waves } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import {
+  Crown,
+  ExternalLink,
+  KeyRound,
+  Loader2,
+  Sparkles,
+  Waves,
+} from "lucide-react";
 import {
   activateLicense,
   clearLicense,
@@ -25,19 +33,75 @@ import { isDesktopApp } from "@/lib/desktop";
 import { cn } from "@/lib/utils";
 
 export function PremiumLicenseCard() {
+  const searchParams = useSearchParams();
   const [license, setLicense] = useState<LicenseState | null>(null);
   const [key, setKey] = useState("");
   const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(
     null
   );
   const [desktop, setDesktop] = useState(false);
-  const checkout = getPremiumCheckoutUrl();
+  const [buying, setBuying] = useState(false);
+  const staticCheckout = getPremiumCheckoutUrl();
   const price = PREMIUM_PRICE_FULL;
 
   useEffect(() => {
     setDesktop(isDesktopApp());
     void refreshPremiumFromAccount().then(() => setLicense(getLicense()));
   }, []);
+
+  // After Stripe redirect: ?checkout=success&session_id=cs_...
+  useEffect(() => {
+    const checkout = searchParams.get("checkout");
+    const sessionId = searchParams.get("session_id");
+    if (checkout === "cancel") {
+      setMsg({ type: "err", text: "Checkout canceled — no charge." });
+      return;
+    }
+    if (checkout !== "success" || !sessionId) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/stripe/confirm?session_id=${encodeURIComponent(sessionId)}`
+        );
+        const data = (await res.json()) as { ok?: boolean; error?: string };
+        if (cancelled) return;
+        if (res.ok && data.ok) {
+          localStorage.setItem(
+            "goal-garden:license",
+            JSON.stringify({
+              key: "STRIPE",
+              activatedAt: new Date().toISOString(),
+              tier: "premium",
+              source: "store",
+            } satisfies LicenseState)
+          );
+          await refreshPremiumFromAccount();
+          setLicense(getLicense());
+          setMsg({
+            type: "ok",
+            text: "Welcome to Premium — thank you for supporting BambooTide & cleanup.",
+          });
+        } else {
+          setMsg({
+            type: "err",
+            text: data.error || "Could not confirm payment. Contact support if charged.",
+          });
+        }
+      } catch {
+        if (!cancelled) {
+          setMsg({
+            type: "err",
+            text: "Could not confirm payment. Refresh or contact hello@bambootide.org.",
+          });
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams]);
 
   function refresh() {
     setLicense(getLicense());
@@ -65,9 +129,47 @@ export function PremiumLicenseCard() {
     refresh();
   }
 
-  function onBuy() {
-    const url = checkout || premiumMarketingUrl();
-    window.open(url, "_blank", "noopener,noreferrer");
+  async function onBuy() {
+    setBuying(true);
+    setMsg(null);
+    try {
+      // Prefer server-side Checkout Session (secret key never in browser)
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = (await res.json()) as { url?: string; error?: string };
+      if (res.ok && data.url) {
+        window.location.href = data.url;
+        return;
+      }
+      // Fallback: static Payment Link from env
+      if (staticCheckout) {
+        window.location.href = staticCheckout;
+        return;
+      }
+      setMsg({
+        type: "err",
+        text:
+          data.error ||
+          "Checkout isn’t ready yet. Email hello@bambootide.org or set STRIPE_SECRET_KEY on the server.",
+      });
+      if (!data.error) {
+        window.open(premiumMarketingUrl(), "_blank", "noopener,noreferrer");
+      }
+    } catch {
+      if (staticCheckout) {
+        window.location.href = staticCheckout;
+        return;
+      }
+      setMsg({
+        type: "err",
+        text: "Could not start checkout. Try again or contact support.",
+      });
+    } finally {
+      setBuying(false);
+    }
   }
 
   const premium = hasPremium();
@@ -105,7 +207,9 @@ export function PremiumLicenseCard() {
 
       <div className="flex items-start gap-2 rounded-xl border border-sky-500/20 bg-sky-500/10 px-3 py-2.5 text-[11px] leading-relaxed text-sky-100/90">
         <Waves className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sky-300" />
-        <span>{CLEANUP_MISSION} Same promise as {COMPANY_NAME}.</span>
+        <span>
+          {CLEANUP_MISSION} Same promise as {COMPANY_NAME}.
+        </span>
       </div>
 
       {!premium && (
@@ -122,31 +226,29 @@ export function PremiumLicenseCard() {
           <button
             type="button"
             className="btn-primary w-full text-sm"
-            onClick={onBuy}
+            onClick={() => void onBuy()}
+            disabled={buying}
           >
-            Subscribe — {price}
-            <ExternalLink className="h-3.5 w-3.5 opacity-80" />
+            {buying ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                Subscribe — {price}
+                <ExternalLink className="h-3.5 w-3.5 opacity-80" />
+              </>
+            )}
           </button>
           <p className="text-[11px] text-muted">{PREMIUM_BILLING_NOTE}</p>
-          {!checkout && (
-            <p className="text-[11px] text-muted">
-              Checkout link is being connected. Email{" "}
-              <a
-                className="text-accent hover:underline"
-                href="mailto:hello@bambootide.org?subject=Goal%20Garden%20Premium%20subscription"
-              >
-                hello@bambootide.org
-              </a>{" "}
-              or use a key from your receipt below.
-            </p>
-          )}
+          <p className="text-[11px] text-muted">
+            Secure checkout via Stripe. Keys never live in the app code.
+          </p>
         </>
       )}
 
       {premium && license && (
         <div className="rounded-xl border border-border bg-black/20 px-3 py-2 text-xs text-muted">
           <p>
-            {license.source === "account" ? (
+            {license.source === "account" || license.source === "store" ? (
               <>Premium on your account</>
             ) : (
               <>
