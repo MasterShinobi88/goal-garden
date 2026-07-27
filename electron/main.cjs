@@ -3,7 +3,7 @@
  * Dev: loads http://localhost:3000
  * Prod: starts Next standalone server from extraResources
  */
-const { app, BrowserWindow, shell, ipcMain } = require("electron");
+const { app, BrowserWindow, shell, ipcMain, dialog } = require("electron");
 const path = require("path");
 const { spawn } = require("child_process");
 const http = require("http");
@@ -13,6 +13,15 @@ const isDev = !app.isPackaged;
 let mainWindow = null;
 let nextProcess = null;
 let serverPort = 3911;
+let nextServerLogs = "";
+
+function showFatalError(title, message) {
+  try {
+    dialog.showErrorBox(title, message);
+  } catch {
+    console.error(title, message);
+  }
+}
 
 function waitForServer(url, attempts = 60) {
   return new Promise((resolve, reject) => {
@@ -47,6 +56,16 @@ function startNextServer() {
       return;
     }
 
+    const nextModule = path.join(appDir, "node_modules", "next");
+    if (!fs.existsSync(nextModule)) {
+      reject(
+        new Error(
+          `Next.js runtime missing at ${nextModule}.\n\nThe installer package is incomplete (node_modules not shipped). Rebuild with npm run desktop:build.`
+        )
+      );
+      return;
+    }
+
     // Pick a free-ish port in a fixed range for desktop
     serverPort = 3911 + Math.floor(Math.random() * 80);
 
@@ -59,6 +78,8 @@ function startNextServer() {
       NEXT_PUBLIC_DEMO_MODE: "true",
     };
 
+    nextServerLogs = "";
+
     // Prefer Electron's bundled Node via process.execPath with ELECTRON_RUN_AS_NODE
     nextProcess = spawn(process.execPath, [serverJs], {
       cwd: appDir,
@@ -66,17 +87,35 @@ function startNextServer() {
       stdio: isDev ? "inherit" : "pipe",
     });
 
+    if (nextProcess.stdout) {
+      nextProcess.stdout.on("data", (chunk) => {
+        nextServerLogs += chunk.toString();
+      });
+    }
+    if (nextProcess.stderr) {
+      nextProcess.stderr.on("data", (chunk) => {
+        nextServerLogs += chunk.toString();
+        console.error(chunk.toString());
+      });
+    }
+
     nextProcess.on("error", reject);
     nextProcess.on("exit", (code) => {
       if (code && code !== 0) {
         console.error("Next server exited", code);
+        if (nextServerLogs) console.error(nextServerLogs.slice(-2000));
       }
     });
 
     const url = `http://127.0.0.1:${serverPort}`;
     waitForServer(url)
       .then(() => resolve(url))
-      .catch(reject);
+      .catch((err) => {
+        const detail = nextServerLogs.trim()
+          ? `\n\nServer output:\n${nextServerLogs.trim().slice(-1500)}`
+          : "";
+        reject(new Error(`${err.message}${detail}`));
+      });
   });
 }
 
@@ -129,12 +168,22 @@ app.whenReady().then(async () => {
     await createWindow();
   } catch (err) {
     console.error(err);
+    showFatalError(
+      "Goal Garden failed to start",
+      err && err.message ? String(err.message) : String(err)
+    );
     app.quit();
   }
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow().catch(console.error);
+      createWindow().catch((err) => {
+        console.error(err);
+        showFatalError(
+          "Goal Garden failed to start",
+          err && err.message ? String(err.message) : String(err)
+        );
+      });
     }
   });
 });

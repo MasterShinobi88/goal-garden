@@ -28,6 +28,15 @@ if (!fs.existsSync(standalone)) {
   process.exit(1);
 }
 
+const standaloneNodeModules = path.join(standalone, "node_modules");
+const nextPkg = path.join(standaloneNodeModules, "next", "package.json");
+if (!fs.existsSync(nextPkg)) {
+  console.error(
+    "Missing .next/standalone/node_modules/next — standalone output is incomplete. Re-run next build."
+  );
+  process.exit(1);
+}
+
 // Ensure static assets inside standalone for server
 copyDir(path.join(root, ".next", "static"), path.join(standalone, ".next", "static"));
 copyDir(path.join(root, "public"), path.join(standalone, "public"));
@@ -42,4 +51,9 @@ if (!fs.existsSync(envHint)) {
   );
 }
 
+// electron-builder's extraResources filter drops root-level node_modules
+// (hardcoded in app-builder-lib createFilter). package.json ships a second
+// extraResources entry from .next/standalone/node_modules → app/node_modules.
 console.log("Standalone prepared for Electron packaging.");
+console.log("  server.js:", fs.existsSync(path.join(standalone, "server.js")));
+console.log("  node_modules/next:", fs.existsSync(nextPkg));

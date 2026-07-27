@@ -1,0 +1,16 @@
+# Goal Garden — browser app on Netlify (Next.js)
+# Connect this GitHub repo in Netlify → auto-deploys on every push.
+# Custom domain: garden.bambootide.org → this site
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NEXT_PUBLIC_DEMO_MODE = "true"
+  # Optional: NEXT_PUBLIC_SITE_URL = "https://garden.bambootide.org"
+
+# Netlify Next.js Runtime (OpenNext adapter is auto-detected on modern Netlify)
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

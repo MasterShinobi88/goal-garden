@@ -1,26 +1,581 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #070b14;
+  --foreground: #eef3fb;
+  --card: #0f1624;
+  --card-hover: #151e30;
+  --border: rgba(148, 163, 184, 0.12);
+  --muted: #8b9cb3;
+  --accent: #34d399;
+  --accent-dim: #059669;
+  --accent-soft: rgba(52, 211, 153, 0.14);
+  --warn: #fbbf24;
+  --danger: #f87171;
+  --sidebar: #080c15;
+  --glass: rgba(15, 22, 36, 0.72);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-hover: var(--card-hover);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-dim: var(--accent-dim);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
 }
 
 body {
-  background: var(--background);
+  background:
+    radial-gradient(1000px 520px at 8% -8%, rgba(16, 48, 42, 0.55), transparent 55%),
+    radial-gradient(900px 480px at 100% 0%, rgba(20, 35, 70, 0.45), transparent 50%),
+    radial-gradient(700px 400px at 50% 100%, rgba(6, 20, 18, 0.5), transparent 55%),
+    var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgba(52, 211, 153, 0.28);
+  color: #ecfdf5;
+}
+
+/* FullCalendar */
+.fc {
+  --fc-border-color: var(--border);
+  --fc-page-bg-color: transparent;
+  --fc-neutral-bg-color: var(--card);
+  --fc-list-event-hover-bg-color: var(--card-hover);
+  --fc-today-bg-color: rgba(52, 211, 153, 0.12);
+  --fc-button-bg-color: #152033;
+  --fc-button-border-color: var(--border);
+  --fc-button-hover-bg-color: #1e2d45;
+  --fc-button-hover-border-color: rgba(148, 163, 184, 0.25);
+  --fc-button-active-bg-color: var(--accent-dim);
+  --fc-button-active-border-color: var(--accent);
+  --fc-now-indicator-color: #34d399;
+  --fc-event-border-color: transparent;
+  color: var(--foreground);
+}
+
+.calendar-shell {
+  min-height: 0;
+}
+
+.calendar-shell .fc {
+  height: 100% !important;
+}
+
+/* Host must fill the card so FullCalendar can size + scroll internally */
+.calendar-fc-host {
+  position: relative;
+  min-height: 280px;
+  height: 100%;
+}
+
+.calendar-fc-host .fc {
+  position: absolute;
+  inset: 0;
+}
+
+/* Ensure week/day time grids scroll the full day (not clipped at noon) */
+.calendar-shell .fc-scroller,
+.calendar-shell .fc-scroller-liquid,
+.calendar-shell .fc-scroller-liquid-absolute {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+.calendar-shell .fc-timegrid-body {
+  min-height: 100%;
+}
+
+/* All-day row can grow with many tasks */
+.calendar-shell .fc-daygrid-body,
+.calendar-shell .fc-timegrid-divider,
+.calendar-shell .fc-timegrid-axis-chunk {
+  overflow: visible;
+}
+
+.calendar-shell .fc-daygrid-day-events {
+  margin-bottom: 2px !important;
+}
+
+.calendar-shell .fc-daygrid-event-harness {
+  margin-top: 1px !important;
+}
+
+/* Hide leftover “more” link if any plugin still emits it */
+.calendar-shell .fc-daygrid-more-link {
+  display: none !important;
+}
+
+.fc .fc-toolbar {
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem !important;
+}
+
+.fc .fc-toolbar-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.fc .fc-button {
+  border-radius: 0.65rem !important;
+  text-transform: capitalize;
+  font-weight: 500;
+  box-shadow: none !important;
+  padding: 0.35rem 0.65rem !important;
+  font-size: 0.8rem !important;
+}
+
+.fc .fc-button-primary:not(:disabled).fc-button-active,
+.fc .fc-button-primary:not(:disabled):active {
+  background: rgba(52, 211, 153, 0.22) !important;
+  border-color: rgba(52, 211, 153, 0.55) !important;
+  color: #6ee7b7 !important;
+}
+
+.fc-theme-standard td,
+.fc-theme-standard th {
+  border-color: var(--border);
+}
+
+/* Day headers — clearer weekday labels */
+.fc .fc-col-header-cell {
+  background: rgba(8, 12, 22, 0.55);
+  padding: 0.35rem 0;
+}
+
+.fc .fc-col-header-cell-cushion {
+  color: #c5d0e0;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Month cells — taller so more all-day tasks fit without clutter */
+.fc .fc-daygrid-day {
+  min-height: 7.5rem;
+  transition: background 0.15s ease;
+}
+
+.fc .fc-daygrid-day-frame {
+  min-height: 7.5rem;
+}
+
+.fc .fc-daygrid-day:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.fc .fc-daygrid-day-number {
+  color: #d6e0ef;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 0.35rem 0.5rem !important;
+  border-radius: 0.5rem;
+  margin: 0.15rem;
+  line-height: 1.2;
+}
+
+.fc .fc-daygrid-day.fc-day-today {
+  background: rgba(52, 211, 153, 0.1) !important;
+  box-shadow: inset 0 0 0 1px rgba(52, 211, 153, 0.28);
+}
+
+.fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
+  background: rgba(52, 211, 153, 0.22);
+  color: #6ee7b7;
+}
+
+.fc .fc-day-other .fc-daygrid-day-number {
+  color: rgba(139, 156, 179, 0.55);
+  font-weight: 500;
+}
+
+/* Weekend subtle tint */
+.fc .fc-day-sat,
+.fc .fc-day-sun {
+  background: rgba(15, 22, 36, 0.35);
+}
+
+/* Events more readable in month cells */
+.fc .fc-daygrid-event {
+  border-radius: 0.35rem !important;
+  font-size: 0.7rem !important;
+  padding: 1px 4px !important;
+  margin-top: 1px !important;
+}
+
+.fc .fc-daygrid-more-link {
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.7rem;
+}
+
+/* Week / Day time grid */
+.fc .fc-timegrid-slot {
+  height: 2.25rem !important;
+}
+
+.fc .fc-timegrid-slot-label-cushion {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.fc .fc-timegrid-axis-cushion {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.fc .fc-timegrid-col.fc-day-today {
+  background: rgba(52, 211, 153, 0.06) !important;
+}
+
+.fc .fc-timegrid-now-indicator-line {
+  border-color: #34d399;
+  border-width: 2px;
+}
+
+.fc .fc-timegrid-now-indicator-arrow {
+  border-top-color: #34d399;
+  border-bottom-color: #34d399;
+}
+
+.fc .fc-timegrid-event {
+  border-radius: 0.4rem !important;
+  border: none !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  font-size: 0.75rem;
+  padding: 2px 4px;
+}
+
+.fc .fc-scrollgrid {
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+/* Mobile toolbar stacking */
+@media (max-width: 640px) {
+  .fc .fc-toolbar.fc-header-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .fc .fc-toolbar-chunk {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  .fc .fc-toolbar-title {
+    font-size: 0.95rem;
+    text-align: center;
+  }
+
+  .fc .fc-daygrid-day {
+    min-height: 4.25rem;
+  }
+
+  .fc .fc-daygrid-day-number {
+    font-size: 0.75rem;
+  }
+}
+
+/* Motion */
+@keyframes grow-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes sway {
+  0%,
+  100% {
+    transform: rotate(-1.1deg);
+  }
+  50% {
+    transform: rotate(1.1deg);
+  }
+}
+
+@keyframes leaf-pop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fruit-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 2px rgba(251, 191, 36, 0.35));
+  }
+  50% {
+    filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.8));
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.tree-sway {
+  transform-origin: 50% 100%;
+  animation: sway 5.5s ease-in-out infinite;
+}
+
+.tree-grow {
+  animation: grow-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.leaf-pop {
+  animation: leaf-pop 0.45s ease-out both;
+}
+
+.fruit-glow {
+  animation: fruit-glow 2.4s ease-in-out infinite;
+}
+
+.animate-fade-up {
+  animation: fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.celebrate-particle {
+  animation: celebrate-fall 1.6s ease-out forwards;
+  pointer-events: none;
+}
+
+.celebrate-toast {
+  animation: celebrate-pop 0.45s ease-out both;
+}
+
+@keyframes celebrate-fall {
+  0% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(120px) rotate(40deg) scale(0.6);
+  }
+}
+
+@keyframes celebrate-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.88) translateY(12px);
+  }
+  20% {
+    opacity: 1;
+    transform: scale(1.03) translateY(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tree-sway,
+  .leaf-pop,
+  .fruit-glow,
+  .celebrate-particle,
+  .celebrate-toast,
+  .animate-fade-up {
+    animation: none !important;
+  }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(71, 85, 105, 0.55);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Primitives */
+.input-field {
+  width: 100%;
+  border-radius: 0.85rem;
+  border: 1px solid var(--border);
+  background: rgba(8, 12, 22, 0.85);
+  color: var(--foreground);
+  padding: 0.7rem 0.9rem;
+  outline: none;
+  font-size: 0.925rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.input-field::placeholder {
+  color: rgba(139, 156, 179, 0.75);
+}
+
+.input-field:focus {
+  border-color: rgba(52, 211, 153, 0.55);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  background: rgba(10, 16, 28, 0.95);
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border-radius: 0.85rem;
+  background: linear-gradient(145deg, #4ade80 0%, #34d399 40%, #059669 100%);
+  color: #042f1a;
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0.68rem 1.1rem;
+  border: 1px solid rgba(167, 243, 208, 0.25);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.12) inset,
+    0 8px 24px rgba(5, 150, 105, 0.22);
+  transition: transform 0.15s ease, filter 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.16) inset,
+    0 12px 28px rgba(5, 150, 105, 0.28);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border-radius: 0.85rem;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--foreground);
+  font-size: 0.9rem;
+  padding: 0.6rem 0.95rem;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(148, 163, 184, 0.22);
+}
+
+.card {
+  border-radius: 1.15rem;
+  border: 1px solid var(--border);
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.03), transparent 40%),
+    linear-gradient(180deg, rgba(18, 26, 42, 0.92), rgba(12, 18, 30, 0.96));
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.02) inset,
+    0 16px 40px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(8px);
+}
+
+.card-interactive {
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-interactive:hover {
+  border-color: rgba(52, 211, 153, 0.28);
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 0 1px rgba(52, 211, 153, 0.06) inset,
+    0 20px 44px rgba(0, 0, 0, 0.32);
+}
+
+.section-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.badge-soft {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  border: 1px solid rgba(52, 211, 153, 0.22);
+  background: var(--accent-soft);
+  color: var(--accent);
+  padding: 0.25rem 0.7rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.surface-inset {
+  border-radius: 0.9rem;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.22);
 }

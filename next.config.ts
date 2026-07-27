@@ -1,8 +1,13 @@
 import type { NextConfig } from "next";
 
+/**
+ * - Browser / Netlify / Vercel: default Next output (Node server or platform adapter)
+ * - Electron desktop: set NEXT_OUTPUT=standalone so the packaged server is self-contained
+ */
 const nextConfig: NextConfig = {
-  // Required for Electron packaging (self-contained Node server)
-  output: "standalone",
+  ...(process.env.NEXT_OUTPUT === "standalone"
+    ? { output: "standalone" as const }
+    : {}),
 };
 
 export default nextConfig;

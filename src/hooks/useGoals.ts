@@ -147,6 +147,7 @@ export function useGoals(userId?: string) {
     category?: import("@/lib/types").GoalCategory;
     health_profile?: import("@/lib/health").WeightLossProfile;
     savings_profile?: import("@/lib/savings-plan").SavingsProfile;
+    earning_profile?: import("@/lib/earning-plan").EarningProfile;
     plant_type?: import("@/lib/plants").PlantType;
   }) {
     if (!userId) throw new Error("Not signed in");

@@ -1,36 +1,84 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Goal Garden
 
-## Getting Started
+A motivating dark-mode goal tracker built with **Next.js (App Router)**, **Tailwind CSS**, and **Supabase**. Break big goals into AI-generated weekly milestones and daily micro-tasks, watch an animated progress tree grow, avoid calendar conflicts, and reschedule missed work without guilt.
 
-First, run the development server:
+## Features
+
+- **Auth** — email/password via Supabase (demo mode works offline with localStorage)
+- **Goals schema** — goals → milestones → daily tasks with RLS
+- **AI planning** — SpaceXAI/xAI (`XAI_API_KEY`) or deterministic mock planner
+- **Progress tree** — SVG sapling → fruiting tree with smooth animations
+- **Calendar** — FullCalendar + mock/Google/Outlook busy slots + free-day suggestions
+- **Smart reschedule** — detect missed tasks, shift to free days, encouraging copy
+- **Sunday review** — completed vs missed summary, suggestions, reflection notes
+- **Task UX** — live toggles, editable titles, progress %, streaks, archive
+- **Demo data** — “Launch a side project in 8 weeks” sample plan
+- **Responsive** dark UI with sidebar navigation, loading & error states
+
+## Quick start
 
 ```bash
+cd goal-garden
+cp .env.example .env.local
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Without Supabase env vars the app runs in **demo mode**: any email/password signs you in and data lives in `localStorage`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Supabase setup
 
-## Learn More
+1. Create a project at [supabase.com](https://supabase.com).
+2. Put URL + anon key in `.env.local`.
+3. Run `supabase/schema.sql` in the SQL editor (tables, RLS, profile trigger).
+4. Auth → enable Email provider (turn off email confirm for local dev if you like).
 
-To learn more about Next.js, take a look at the following resources:
+## AI planning (SpaceXAI / xAI)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```env
+XAI_API_KEY=your-key-from-console.x.ai
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Uses OpenAI-compatible API at `https://api.x.ai/v1` with model `grok-4.5`.  
+If the key is missing (or `USE_MOCK_AI=true`), a local mock generator builds 3–5 milestones and 3–7 tasks each.
 
-## Deploy on Vercel
+## Environment
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Variable | Purpose |
+|----------|---------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
+| `XAI_API_KEY` | Server-side plan generation |
+| `USE_MOCK_AI` | Force mock planner |
+| `NEXT_PUBLIC_DEMO_MODE` | Force local demo auth/storage |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Project structure
+
+```
+src/
+  app/
+    api/generate-plan|reschedule|calendar/busy|seed-demo
+    dashboard/          # main app shell
+    login|signup/
+  components/           # UI (tree, calendar, modals, …)
+  hooks/useGoals.ts
+  lib/                  # AI, calendar, reschedule, Supabase, demo data
+supabase/schema.sql
+```
+
+## Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Development server |
+| `npm run build` | Production build |
+| `npm run start` | Start production server |
+| `npm run lint` | ESLint |
+
+## Notes
+
+- **Calendar OAuth**: Settings lets you pick Google/Outlook; `/api/calendar/busy` returns simulated busy slots until you wire real OAuth tokens.
+- **Archiving**: goals auto-archive when every task is complete; you can also archive manually.
+- **Streaks**: increment when you complete at least one task on consecutive days (demo/local store).

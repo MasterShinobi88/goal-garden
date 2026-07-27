@@ -1,65 +1,139 @@
-import Image from "next/image";
+import Link from "next/link";
+import {
+  Calendar,
+  Calculator,
+  Sparkles,
+  TreePine,
+  Droplets,
+  Shield,
+} from "lucide-react";
+import { GuestStartButton } from "@/components/GuestStartButton";
 
-export default function Home() {
+const features = [
+  {
+    icon: Sparkles,
+    title: "Intelligent plans",
+    body: "Big goals become weekly milestones and daily micro-tasks — with healthy weight-loss coaching when you need it.",
+  },
+  {
+    icon: TreePine,
+    title: "Living progress tree",
+    body: "Watch a sapling grow into a fruiting canopy as you complete work. Progress you can feel.",
+  },
+  {
+    icon: Calculator,
+    title: "Calorie calculator",
+    body: "Log food by amount. Auto-calc calories and macros, synced to your daily HUD.",
+  },
+  {
+    icon: Calendar,
+    title: "Calendar that stays calm",
+    body: "Subscribe Google, Outlook, or Apple to a private feed — free-time tasks, no spam meetings.",
+  },
+  {
+    icon: Droplets,
+    title: "Daily garden HUD",
+    body: "Water glasses, fuel, and movement in one quiet strip. Gentle reminders only when you ask.",
+  },
+  {
+    icon: Shield,
+    title: "Your AI, your keys",
+    body: "Connect OpenAI, Claude, Gemini, or xAI — or stay offline with a smart built-in coach.",
+  },
+];
+
+export default function HomePage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <main className="relative flex min-h-full flex-1 flex-col overflow-hidden">
+      {/* Ambient */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -left-32 top-0 h-[28rem] w-[28rem] rounded-full bg-emerald-500/10 blur-[100px]" />
+        <div className="absolute -right-20 top-20 h-[24rem] w-[24rem] rounded-full bg-sky-500/10 blur-[100px]" />
+        <div className="absolute bottom-0 left-1/3 h-64 w-64 rounded-full bg-emerald-900/20 blur-[80px]" />
+        <div
+          className="absolute inset-0 opacity-[0.035]"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px)",
+            backgroundSize: "64px 64px",
+          }}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+      </div>
+
+      <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/15 ring-1 ring-accent/25">
+            <TreePine className="h-5 w-5 text-accent" />
+          </div>
+          <span className="text-sm font-semibold tracking-tight">Goal Garden</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link href="/login" className="btn-ghost text-sm">
+            Sign in
+          </Link>
+          <Link href="/signup" className="btn-primary text-sm">
+            Get started
+          </Link>
+        </div>
+      </header>
+
+      <section className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-6 pb-20 pt-10">
+        <div className="animate-fade-up max-w-3xl">
+          <p className="badge-soft mb-5">
+            <Sparkles className="h-3.5 w-3.5" />
+            Premium goal coaching · calm by design
+          </p>
+          <h1 className="text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl lg:text-[3.5rem]">
+            Grow ambitious goals into{" "}
+            <span className="bg-gradient-to-r from-emerald-200 via-accent to-teal-400 bg-clip-text text-transparent">
+              daily progress
+            </span>
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
+          <p className="mt-5 max-w-2xl text-base leading-relaxed text-muted sm:text-lg">
+            Plant a goal. Get a healthy plan. Track water, calories, and tasks —
+            with a progress tree that grows as you do. No guilt. No noise.
+          </p>
+
+          <div className="mt-9 flex flex-wrap gap-3">
+            <GuestStartButton label="Plant your first goal" />
+            <Link href="/login" className="btn-ghost px-5">
+              Sign in
+            </Link>
+          </div>
+
+          <p className="mt-4 text-xs text-muted/80">
+            Free in the browser · Data stays on this device ·{" "}
             <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+              href="https://bambootide.org/apps/goal-garden"
+              className="text-accent hover:underline"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+              BambooTide
+            </a>
+            {" · "}
+            Connect your own AI anytime in Settings
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <div className="mt-16 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {features.map((f, i) => (
+            <div
+              key={f.title}
+              className="card card-interactive animate-fade-up p-5"
+              style={{ animationDelay: `${80 + i * 40}ms` }}
+            >
+              <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-accent/10 text-accent ring-1 ring-accent/15">
+                <f.icon className="h-4 w-4" />
+              </div>
+              <h3 className="text-sm font-semibold tracking-tight">{f.title}</h3>
+              <p className="mt-1.5 text-sm leading-relaxed text-muted">{f.body}</p>
+            </div>
+          ))}
         </div>
-      </main>
-    </div>
+      </section>
+
+      <footer className="relative z-10 border-t border-border/60 py-6 text-center text-[11px] text-muted">
+        Goal Garden · Progress over perfection · Educational guidance only
+      </footer>
+    </main>
   );
 }
