@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import type Stripe from "stripe";
 import {
   getStripe,
   isStripeConfigured,
@@ -10,19 +9,14 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { COMPANY_NAME, PREMIUM_PRICE_USD } from "@/lib/pricing";
 
-/**
- * Stripe tax code — Software as a service (SaaS), personal use.
- * Required when Managed Payments is on (default for many new Stripe accounts).
- * @see https://docs.stripe.com/tax/tax-codes
- */
+/** SaaS – personal use (eligible for Managed Payments). */
 const PREMIUM_TAX_CODE = "txcd_10103001";
 
 /**
  * POST /api/stripe/checkout
- * Subscription Checkout at $7.99/mo. Secret key stays on the server.
  *
- * Always uses inline price_data + tax_code so Managed Payments is satisfied
- * even if a Dashboard product has no tax code.
+ * Uses Stripe raw form encoding so tax_code + managed_payments are never
+ * stripped by SDK typing. Required for accounts with Managed Payments default on.
  */
 export async function POST(request: Request) {
   try {
@@ -45,7 +39,7 @@ export async function POST(request: Request) {
       };
       if (body.email) email = String(body.email).trim().toLowerCase();
     } catch {
-      /* empty body ok */
+      /* empty ok */
     }
 
     try {
@@ -58,92 +52,81 @@ export async function POST(request: Request) {
         email = email || user.email || undefined;
       }
     } catch {
-      /* demo / no supabase */
+      /* no supabase */
     }
 
     const stripe = getStripe();
     const origin = siteOrigin();
+    const unitAmount = String(premiumUnitAmountCents()); // "799"
 
-    // Always build product inline with tax_code — do NOT use a bare price_ id
-    // that may lack tax_code (Managed Payments will reject it).
-    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
-      {
-        price_data: {
-          currency: "usd",
-          unit_amount: premiumUnitAmountCents(), // 799 = $7.99
-          recurring: { interval: "month" },
-          product_data: {
-            name: "Goal Garden Premium",
-            description: premiumProductDescription(),
-            tax_code: PREMIUM_TAX_CODE,
-            metadata: {
-              product: "goal_garden_premium",
-              company: COMPANY_NAME,
-            },
-          },
-        },
-        quantity: 1,
-      },
-    ];
-
-    // Use a plain object so managed_payments is always sent (SDK types may omit it).
-    const sessionParams = {
-      mode: "subscription" as const,
-      line_items: lineItems,
+    // Form-style body — matches what Stripe logs; tax_code is explicit.
+    // managed_payments[enabled]=false satisfies accounts that still require tax codes.
+    const form: Record<string, string> = {
+      mode: "subscription",
       success_url: `${origin}/dashboard/settings?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/dashboard/settings?checkout=cancel`,
-      customer_email: email,
-      client_reference_id: userId || undefined,
-      metadata: {
-        product: "goal_garden_premium",
-        company: COMPANY_NAME,
-        price_usd: String(PREMIUM_PRICE_USD),
-        supabase_user_id: userId || "",
-      },
-      subscription_data: {
-        metadata: {
-          product: "goal_garden_premium",
-          supabase_user_id: userId || "",
-        },
-      },
-      allow_promotion_codes: true,
-      // Disable Managed Payments for this session if tax_code still fails on some accounts
-      managed_payments: {
-        enabled: false,
-      },
+      "line_items[0][quantity]": "1",
+      "line_items[0][price_data][currency]": "usd",
+      "line_items[0][price_data][unit_amount]": unitAmount,
+      "line_items[0][price_data][recurring][interval]": "month",
+      "line_items[0][price_data][product_data][name]": "Goal Garden Premium",
+      "line_items[0][price_data][product_data][description]":
+        premiumProductDescription(),
+      "line_items[0][price_data][product_data][tax_code]": PREMIUM_TAX_CODE,
+      "metadata[product]": "goal_garden_premium",
+      "metadata[company]": COMPANY_NAME,
+      "metadata[price_usd]": String(PREMIUM_PRICE_USD),
+      "metadata[supabase_user_id]": userId || "",
+      "subscription_data[metadata][product]": "goal_garden_premium",
+      "subscription_data[metadata][supabase_user_id]": userId || "",
+      allow_promotion_codes: "true",
+      "managed_payments[enabled]": "false",
     };
 
-    let session: Stripe.Checkout.Session;
+    if (email) {
+      form.customer_email = email;
+    }
+    if (userId) {
+      form.client_reference_id = userId;
+    }
+
+    async function createSession(body: Record<string, string>) {
+      // rawRequest guarantees every field is sent to Stripe exactly as specified
+      return stripe.rawRequest("POST", "/v1/checkout/sessions", body);
+    }
+
+    let session: {
+      id?: string;
+      url?: string | null;
+      error?: { message?: string };
+    };
+
     try {
-      session = await stripe.checkout.sessions.create(
-        sessionParams as Stripe.Checkout.SessionCreateParams
-      );
+      session = (await createSession(form)) as typeof session;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      // Second attempt: tax_code only (no managed_payments field) if API rejects unknown params
-      if (msg.includes("managed_payments") || msg.includes("unknown")) {
-        const { managed_payments: _mp, ...withoutManaged } = sessionParams;
-        session = await stripe.checkout.sessions.create(
-          withoutManaged as Stripe.Checkout.SessionCreateParams
-        );
-      } else if (msg.includes("tax code") || msg.includes("Managed Payments")) {
-        // Third attempt: digital goods tax code variant
-        const alt = structuredClone(sessionParams);
-        const pd = alt.line_items[0]?.price_data?.product_data as {
-          tax_code?: string;
-        };
-        if (pd) pd.tax_code = "txcd_10000000"; // General - Electronically Supplied Services
-        session = await stripe.checkout.sessions.create(
-          alt as Stripe.Checkout.SessionCreateParams
-        );
+      // Retry without managed_payments if the API rejects that param name
+      if (msg.includes("managed_payments")) {
+        const { "managed_payments[enabled]": _drop, ...rest } = form;
+        session = (await createSession(rest)) as typeof session;
+      } else if (msg.includes("tax code") || msg.includes("tax_code")) {
+        // Alternate electronically-supplied-services code
+        const retry = { ...form };
+        retry["line_items[0][price_data][product_data][tax_code]"] =
+          "txcd_10000000";
+        session = (await createSession(retry)) as typeof session;
       } else {
         throw err;
       }
     }
 
-    if (!session.url) {
+    if (!session?.url) {
       return NextResponse.json(
-        { error: "Stripe did not return a checkout URL." },
+        {
+          error:
+            (session as { error?: { message?: string } })?.error?.message ||
+            "Stripe did not return a checkout URL.",
+        },
         { status: 500 }
       );
     }
