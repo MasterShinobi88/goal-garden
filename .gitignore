@@ -19,10 +19,14 @@
 
 # production
 /build
+/dist-desktop
 
 # misc
 .DS_Store
 *.pem
+
+# local calendar feed storage
+/data/
 
 # debug
 npm-debug.log*
