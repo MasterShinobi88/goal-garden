@@ -27,11 +27,15 @@ Netlify already sets `NEXT_PUBLIC_DEMO_MODE=false`. You still need **Supabase**.
 2. Paste **all** of `supabase/schema.sql` from the Goal Garden repo  
 3. Run it  
 
-### 3. Enable email login
+### 3. Enable email login + **require verification**
 
 1. **Authentication → Providers → Email** → enabled  
-2. For launch testing you can turn **off** “Confirm email”  
-   (turn confirm **on** later for better security)
+2. **Confirm email** → **ON** (required — Goal Garden blocks unverified users)  
+3. **URL configuration** (Auth → URL Configuration):  
+   - **Site URL:** `https://goal-garden.netlify.app`  
+   - **Redirect URLs** add:  
+     - `https://goal-garden.netlify.app/auth/callback`  
+     - `http://localhost:3000/auth/callback` (local dev)
 
 ### 4. Copy keys
 
@@ -60,10 +64,11 @@ Deploys → **Trigger deploy** (or push to GitHub).
 ### 7. Test
 
 1. Open https://goal-garden.netlify.app/signup  
-2. Use a **real** email + password (8+ chars)  
-3. Sidebar should say **Member · signed in** (not Demo)  
-4. Sign out → sign in again with the **same** password  
-5. Wrong password → error (not a free pass)
+2. Use a **real** email + password (8+ chars) + display name  
+3. App says **check your email** — you are **not** signed in yet  
+4. Open the confirmation link → lands on `/auth/callback` → dashboard  
+5. Sign out → sign in works only **after** verification  
+6. Before verifying, sign-in shows **verify your email** + Resend button
 
 ---
 

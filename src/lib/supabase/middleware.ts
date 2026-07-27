@@ -38,11 +38,25 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const isAuthPage = path.startsWith("/login") || path.startsWith("/signup");
+  const isAuthPage =
+    path.startsWith("/login") ||
+    path.startsWith("/signup") ||
+    path.startsWith("/auth/");
   const isProtected =
     path.startsWith("/dashboard") ||
     path.startsWith("/api/goals") ||
     path.startsWith("/api/seed");
+
+  // Email verification required — block unconfirmed sessions from the app
+  const emailVerified = Boolean(user?.email_confirmed_at);
+
+  if (user && !emailVerified && isProtected) {
+    await supabase.auth.signOut();
+    const redirect = request.nextUrl.clone();
+    redirect.pathname = "/login";
+    redirect.searchParams.set("error", "verify_email");
+    return NextResponse.redirect(redirect);
+  }
 
   if (!user && isProtected) {
     const redirect = request.nextUrl.clone();
@@ -51,7 +65,7 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(redirect);
   }
 
-  if (user && isAuthPage) {
+  if (user && emailVerified && (path.startsWith("/login") || path.startsWith("/signup"))) {
     const redirect = request.nextUrl.clone();
     redirect.pathname = "/dashboard";
     return NextResponse.redirect(redirect);

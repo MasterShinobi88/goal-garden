@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertTriangle,
   Loader2,
   Lock,
+  Mail,
   ShieldCheck,
   TreePine,
 } from "lucide-react";
@@ -19,23 +20,74 @@ import {
 import { isSupabaseEnvConfigured } from "@/lib/runtime-mode";
 import { refreshPremiumFromAccount } from "@/lib/license";
 import { BambooTideBrand } from "@/components/BambooTideBrand";
-import { CLEANUP_MISSION, COMPANY_NAME, PREMIUM_PRICE_FULL } from "@/lib/pricing";
+import {
+  CLEANUP_MISSION,
+  COMPANY_NAME,
+  PREMIUM_PRICE_FULL,
+} from "@/lib/pricing";
+import {
+  isEmailVerified,
+  SIGNUP_VERIFY_MESSAGE,
+  VERIFY_EMAIL_MESSAGE,
+} from "@/lib/auth-guards";
 
 const MIN_PASSWORD = 8;
 
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [info, setInfo] = useState<string | null>(null);
+  const [pendingVerifyEmail, setPendingVerifyEmail] = useState<string | null>(
+    null
+  );
+  const [resendLoading, setResendLoading] = useState(false);
 
-  // Real cloud auth only when Supabase is configured AND not in demo mode
   const cloudReady = isSupabaseConfigured() && isSupabaseEnvConfigured();
   const demo = isDemoMode() && !cloudReady;
   const productionMissingAuth = !isDemoMode() && !cloudReady;
+
+  useEffect(() => {
+    const err = searchParams.get("error");
+    if (err === "verify_email") {
+      setError(VERIFY_EMAIL_MESSAGE);
+    } else if (err === "auth_callback") {
+      setError(
+        "Email confirmation link was invalid or expired. Request a new link below."
+      );
+    }
+  }, [searchParams]);
+
+  async function resendVerification() {
+    const target = (pendingVerifyEmail || email).trim().toLowerCase();
+    if (!target || !cloudReady) return;
+    setResendLoading(true);
+    setError(null);
+    try {
+      const supabase = createClient();
+      const { error: resendError } = await supabase.auth.resend({
+        type: "signup",
+        email: target,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      if (resendError) throw resendError;
+      setInfo(
+        `Verification email sent again to ${target}. Click the link in the email before signing in.`
+      );
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Could not resend verification email"
+      );
+    } finally {
+      setResendLoading(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -66,7 +118,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     setLoading(true);
 
     try {
-      // Local / desktop demo only
+      // Local / desktop demo only (no email verification)
       if (demo) {
         if (mode === "signup") {
           demoSignUp(cleanEmail, password, name);
@@ -85,6 +137,8 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       }
 
       const supabase = createClient();
+      const emailRedirectTo = `${window.location.origin}/auth/callback`;
+
       if (mode === "signup") {
         const { data, error: signError } = await supabase.auth.signUp({
           email: cleanEmail,
@@ -93,38 +147,70 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
             data: {
               display_name: name.trim() || cleanEmail.split("@")[0],
             },
-            emailRedirectTo:
-              typeof window !== "undefined"
-                ? `${window.location.origin}/dashboard`
-                : undefined,
+            emailRedirectTo,
           },
         });
         if (signError) throw signError;
 
+        // Already registered (Supabase returns user with empty identities)
+        const identities = data.user?.identities ?? [];
+        if (data.user && identities.length === 0) {
+          setPendingVerifyEmail(cleanEmail);
+          setError(
+            "An account with this email already exists. Sign in, or resend the verification email if you have not confirmed yet."
+          );
+          return;
+        }
+
+        // Mandatory verification: never enter the app until email is confirmed
         if (data.session) {
+          if (!isEmailVerified(data.user)) {
+            await supabase.auth.signOut();
+            setPendingVerifyEmail(cleanEmail);
+            setInfo(SIGNUP_VERIFY_MESSAGE);
+            return;
+          }
+          // Only if project has confirm email OFF (should not happen in production)
           await refreshPremiumFromAccount();
           router.push("/dashboard");
           router.refresh();
-        } else {
-          setInfo(
-            "Account created. Check your email to confirm, then sign in. Your garden is private to your account."
-          );
+          return;
         }
-      } else {
-        const { error: signError } = await supabase.auth.signInWithPassword({
+
+        setPendingVerifyEmail(cleanEmail);
+        setInfo(SIGNUP_VERIFY_MESSAGE);
+        setPassword("");
+        return;
+      }
+
+      // —— Login ——
+      const { data: signData, error: signError } =
+        await supabase.auth.signInWithPassword({
           email: cleanEmail,
           password,
         });
-        if (signError) {
-          if (signError.message.toLowerCase().includes("invalid")) {
-            throw new Error("Incorrect email or password.");
-          }
-          throw signError;
+      if (signError) {
+        const m = signError.message.toLowerCase();
+        if (m.includes("email not confirmed") || m.includes("not confirmed")) {
+          setPendingVerifyEmail(cleanEmail);
+          throw new Error(VERIFY_EMAIL_MESSAGE);
         }
-        await refreshPremiumFromAccount();
-        router.push("/dashboard");
-        router.refresh();
+        if (m.includes("invalid")) {
+          throw new Error("Incorrect email or password.");
+        }
+        throw signError;
       }
+
+      const user = signData.user;
+      if (!isEmailVerified(user)) {
+        await supabase.auth.signOut();
+        setPendingVerifyEmail(cleanEmail);
+        throw new Error(VERIFY_EMAIL_MESSAGE);
+      }
+
+      await refreshPremiumFromAccount();
+      router.push("/dashboard");
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Authentication failed");
     } finally {
@@ -146,8 +232,8 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         </h1>
         <p className="mt-1.5 text-sm text-muted">
           {mode === "login"
-            ? "Sign in with your email — goals sync on every device."
-            : "Real account · private · available anywhere you sign in."}
+            ? "Sign in with a verified email — goals sync on every device."
+            : "Real account · email verification required · private by design."}
         </p>
 
         {demo ? (
@@ -157,8 +243,8 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           </p>
         ) : (
           <p className="mx-auto mt-3 inline-flex items-center gap-1.5 rounded-full border border-accent/25 bg-accent/10 px-3 py-1 text-[11px] font-medium text-accent">
-            <ShieldCheck className="h-3.5 w-3.5" />
-            Secure login · encrypted password
+            <Mail className="h-3.5 w-3.5" />
+            Email verification required
           </p>
         )}
       </div>
@@ -170,11 +256,8 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
             Cloud accounts not connected
           </p>
           <p className="mt-2 text-xs leading-relaxed text-amber-100/80">
-            Add <code className="text-accent">NEXT_PUBLIC_SUPABASE_URL</code> and{" "}
-            <code className="text-accent">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> in
-            Netlify, run <code className="text-accent">supabase/schema.sql</code>{" "}
-            in your Supabase project, then redeploy. Until then sign-up is
-            disabled so fake logins cannot be created.
+            Add Supabase keys in Netlify and enable{" "}
+            <strong>Confirm email</strong> in Supabase Auth settings.
           </p>
         </div>
       )}
@@ -235,9 +318,9 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 
         {mode === "signup" && !demo && (
           <p className="text-[11px] leading-relaxed text-muted">
-            Free includes 3 active goals. Premium is {PREMIUM_PRICE_FULL} —{" "}
-            {CLEANUP_MISSION} We store your email and goals securely; we never
-            sell your personal data.
+            You <strong className="text-foreground">must verify your email</strong>{" "}
+            before signing in. Free includes 3 active goals. Premium is{" "}
+            {PREMIUM_PRICE_FULL}. {CLEANUP_MISSION}
           </p>
         )}
 
@@ -247,10 +330,33 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           </p>
         )}
         {info && (
-          <p className="rounded-xl border border-accent/30 bg-accent/10 px-3 py-2 text-sm text-accent">
-            {info}
-          </p>
+          <div className="rounded-xl border border-accent/30 bg-accent/10 px-3 py-2 text-sm text-accent">
+            <p className="flex items-start gap-2">
+              <Mail className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{info}</span>
+            </p>
+          </div>
         )}
+
+        {(pendingVerifyEmail ||
+          (error && error.includes("verify your email"))) &&
+          cloudReady && (
+            <button
+              type="button"
+              className="btn-ghost w-full text-sm"
+              disabled={resendLoading}
+              onClick={() => void resendVerification()}
+            >
+              {resendLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <Mail className="h-4 w-4" />
+                  Resend verification email
+                </>
+              )}
+            </button>
+          )}
 
         <button
           type="submit"
@@ -275,7 +381,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           </>
         ) : (
           <>
-            Already growing?{" "}
+            Already verified?{" "}
             <Link
               href="/login"
               className="font-medium text-accent hover:underline"
