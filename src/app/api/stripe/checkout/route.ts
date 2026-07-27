@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import {
   getStripe,
-  getStripePriceId,
   isStripeConfigured,
   premiumProductDescription,
   premiumUnitAmountCents,
@@ -12,17 +11,18 @@ import { createClient } from "@/lib/supabase/server";
 import { COMPANY_NAME, PREMIUM_PRICE_USD } from "@/lib/pricing";
 
 /**
- * Stripe tax code for digitally delivered software / SaaS.
- * Required when Managed Payments is enabled on the account.
+ * Stripe tax code — Software as a service (SaaS), personal use.
+ * Required when Managed Payments is on (default for many new Stripe accounts).
  * @see https://docs.stripe.com/tax/tax-codes
- * @see https://docs.stripe.com/payments/managed-payments/how-it-works
  */
-const PREMIUM_TAX_CODE = "txcd_10103001"; // Software as a service (SaaS) - personal use
+const PREMIUM_TAX_CODE = "txcd_10103001";
 
 /**
  * POST /api/stripe/checkout
- * Creates a Stripe Checkout Session in subscription mode ($7.99/mo).
- * Secret key never leaves the server.
+ * Subscription Checkout at $7.99/mo. Secret key stays on the server.
+ *
+ * Always uses inline price_data + tax_code so Managed Payments is satisfied
+ * even if a Dashboard product has no tax code.
  */
 export async function POST(request: Request) {
   try {
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            "Stripe is not configured. Set STRIPE_SECRET_KEY (and optionally STRIPE_PRICE_ID) in Netlify.",
+            "Stripe is not configured. Set STRIPE_SECRET_KEY in Netlify environment variables.",
         },
         { status: 503 }
       );
@@ -63,30 +63,32 @@ export async function POST(request: Request) {
 
     const stripe = getStripe();
     const origin = siteOrigin();
-    const priceId = getStripePriceId();
 
-    // Prefer Dashboard price when set; otherwise inline $7.99/mo with tax code.
-    // Managed Payments requires product tax_code — always set it on price_data.
-    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = priceId
-      ? [{ price: priceId, quantity: 1 }]
-      : [
-          {
-            price_data: {
-              currency: "usd",
-              product_data: {
-                name: "Goal Garden Premium",
-                description: premiumProductDescription(),
-                tax_code: PREMIUM_TAX_CODE,
-              },
-              unit_amount: premiumUnitAmountCents(), // 799 = $7.99
-              recurring: { interval: "month" },
+    // Always build product inline with tax_code — do NOT use a bare price_ id
+    // that may lack tax_code (Managed Payments will reject it).
+    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
+      {
+        price_data: {
+          currency: "usd",
+          unit_amount: premiumUnitAmountCents(), // 799 = $7.99
+          recurring: { interval: "month" },
+          product_data: {
+            name: "Goal Garden Premium",
+            description: premiumProductDescription(),
+            tax_code: PREMIUM_TAX_CODE,
+            metadata: {
+              product: "goal_garden_premium",
+              company: COMPANY_NAME,
             },
-            quantity: 1,
           },
-        ];
+        },
+        quantity: 1,
+      },
+    ];
 
-    const sessionParams: Stripe.Checkout.SessionCreateParams = {
-      mode: "subscription",
+    // Use a plain object so managed_payments is always sent (SDK types may omit it).
+    const sessionParams = {
+      mode: "subscription" as const,
       line_items: lineItems,
       success_url: `${origin}/dashboard/settings?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/dashboard/settings?checkout=cancel`,
@@ -105,48 +107,37 @@ export async function POST(request: Request) {
         },
       },
       allow_promotion_codes: true,
-      // Avoid Managed Payments tax_code requirement when using a Dashboard price
-      // that has no tax code yet. Safe for standard Checkout subscriptions.
-      // @see https://docs.stripe.com/payments/managed-payments/how-it-works
-      ...( {
-        managed_payments: { enabled: false },
-      } as Partial<Stripe.Checkout.SessionCreateParams>),
+      // Disable Managed Payments for this session if tax_code still fails on some accounts
+      managed_payments: {
+        enabled: false,
+      },
     };
 
-    // If Dashboard price lacks tax_code, Managed Payments still errors —
-    // fall back to inline price_data with tax_code.
     let session: Stripe.Checkout.Session;
     try {
-      session = await stripe.checkout.sessions.create(sessionParams);
-    } catch (firstErr) {
-      const msg = firstErr instanceof Error ? firstErr.message : String(firstErr);
-      if (
-        priceId &&
-        (msg.includes("tax code") || msg.includes("Managed Payments"))
-      ) {
-        console.warn(
-          "[stripe/checkout] price tax_code missing — retrying with inline price_data"
+      session = await stripe.checkout.sessions.create(
+        sessionParams as Stripe.Checkout.SessionCreateParams
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      // Second attempt: tax_code only (no managed_payments field) if API rejects unknown params
+      if (msg.includes("managed_payments") || msg.includes("unknown")) {
+        const { managed_payments: _mp, ...withoutManaged } = sessionParams;
+        session = await stripe.checkout.sessions.create(
+          withoutManaged as Stripe.Checkout.SessionCreateParams
         );
-        session = await stripe.checkout.sessions.create({
-          ...sessionParams,
-          line_items: [
-            {
-              price_data: {
-                currency: "usd",
-                product_data: {
-                  name: "Goal Garden Premium",
-                  description: premiumProductDescription(),
-                  tax_code: PREMIUM_TAX_CODE,
-                },
-                unit_amount: premiumUnitAmountCents(),
-                recurring: { interval: "month" },
-              },
-              quantity: 1,
-            },
-          ],
-        });
+      } else if (msg.includes("tax code") || msg.includes("Managed Payments")) {
+        // Third attempt: digital goods tax code variant
+        const alt = structuredClone(sessionParams);
+        const pd = alt.line_items[0]?.price_data?.product_data as {
+          tax_code?: string;
+        };
+        if (pd) pd.tax_code = "txcd_10000000"; // General - Electronically Supplied Services
+        session = await stripe.checkout.sessions.create(
+          alt as Stripe.Checkout.SessionCreateParams
+        );
       } else {
-        throw firstErr;
+        throw err;
       }
     }
 
