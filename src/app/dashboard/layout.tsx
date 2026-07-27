@@ -14,7 +14,6 @@ import {
 import { GentleReminders } from "@/components/GentleReminders";
 import { useAuthUser, useGoals } from "@/hooks/useGoals";
 import { isDemoMode } from "@/lib/local-store";
-import { isSupabaseConfigured } from "@/lib/supabase/client";
 
 export default function DashboardLayout({
   children,
@@ -28,8 +27,8 @@ export default function DashboardLayout({
 
   useEffect(() => {
     if (loading) return;
-    // Real accounts required when cloud auth is live
-    if (!user && isSupabaseConfigured() && !isDemoMode()) {
+    // Production (demo off): always require a real session
+    if (!user && !isDemoMode()) {
       router.replace("/login?next=/dashboard");
     }
   }, [user, loading, router]);
@@ -42,7 +41,7 @@ export default function DashboardLayout({
     );
   }
 
-  if (!user && isSupabaseConfigured() && !isDemoMode()) {
+  if (!user && !isDemoMode()) {
     return (
       <div className="flex h-dvh flex-1 items-center justify-center">
         <LoadingSpinner label="Redirecting to sign in…" />

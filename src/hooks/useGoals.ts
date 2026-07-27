@@ -59,8 +59,8 @@ export function useAuthUser() {
     }
 
     async function load() {
-      // Local demo / desktop only
-      if (!isSupabaseConfigured() || isDemoMode()) {
+      // Local demo / desktop only — never invent a user in production mode
+      if (isDemoMode() && (!isSupabaseConfigured() || process.env.NEXT_PUBLIC_DESKTOP === "true")) {
         const s = ensureSessionForDemo();
         if (mounted) {
           setUser({
@@ -68,6 +68,15 @@ export function useAuthUser() {
             email: s.email,
             name: s.display_name,
           });
+          setLoading(false);
+        }
+        return;
+      }
+
+      if (!isSupabaseConfigured()) {
+        // Production without Supabase: no fake login
+        if (mounted) {
+          setUser(null);
           setLoading(false);
         }
         return;

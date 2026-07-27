@@ -349,7 +349,11 @@ export function Sidebar({ userLabel }: { userLabel?: string | null }) {
               {userLabel || "Gardener"}
             </p>
             <p className="text-[10px] text-muted">
-              {isDemoMode() ? "Demo workspace" : "Signed in"}
+              {isDemoMode()
+                ? "Local demo (not a real account)"
+                : premium
+                  ? "Premium member"
+                  : "Member · signed in"}
             </p>
           </div>
         </div>
