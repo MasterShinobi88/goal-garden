@@ -24,8 +24,9 @@ const product = await stripe.products.create({
   name: "Goal Garden Premium",
   description:
     "Monthly Premium for Goal Garden by BambooTide. Unlimited goals, account sync, ongoing support. 10% of net proceeds support ocean and river cleanup. Cancel anytime.",
-  // Digital goods tax code (US); adjust if your Stripe tax setup differs
-  tax_code: "txcd_10103100",
+  // Required when Managed Payments is enabled on the Stripe account
+  // Software as a service (SaaS) — personal use
+  tax_code: "txcd_10103001",
   metadata: {
     product: "goal_garden_premium",
     company: "BambooTide",

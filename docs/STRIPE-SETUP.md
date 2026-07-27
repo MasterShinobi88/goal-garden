@@ -107,3 +107,14 @@ We **do not** use `managed_payments` blueprints or hardcode keys.
 |----------------------|-------------|
 | `unit_amount: 1000` ($10) | `unit_amount: 799` ($7.99) |
 | name: Basic subscription | Goal Garden Premium |
+
+## Managed Payments / tax code error
+
+If Subscribe fails with:
+
+> the product tax code is missing. Managed Payments…
+
+Then either:
+
+1. **App fix (already shipped):** checkout sets `tax_code` + `managed_payments.enabled = false` and retries with inline price data, or  
+2. **Dashboard:** Product → Tax code → **Software as a service (SaaS)** (`txcd_10103001`)
