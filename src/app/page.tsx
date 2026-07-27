@@ -9,8 +9,10 @@ import {
 } from "lucide-react";
 import { GuestStartButton } from "@/components/GuestStartButton";
 import { BambooTideBrand } from "@/components/BambooTideBrand";
-import { isDemoMode } from "@/lib/local-store";
-import { isSupabaseConfigured } from "@/lib/supabase/client";
+import {
+  isDemoMode,
+  isSupabaseEnvConfigured,
+} from "@/lib/runtime-mode";
 import {
   CLEANUP_MISSION,
   COMPANY_NAME,
@@ -108,7 +110,7 @@ export default function HomePage() {
 
           <div className="mt-9 flex flex-wrap gap-3">
             {/* Guest only when no cloud auth (local demo). Production uses real signup. */}
-            {isDemoMode() && !isSupabaseConfigured() ? (
+            {isDemoMode() && !isSupabaseEnvConfigured() ? (
               <GuestStartButton label="Try locally" />
             ) : (
               <Link href="/signup" className="btn-primary px-5">
