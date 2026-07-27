@@ -12,6 +12,8 @@ import {
   requiresRealAccount,
 } from "@/lib/local-store";
 import { refreshPremiumFromAccount } from "@/lib/license";
+import { BambooTideBrand } from "@/components/BambooTideBrand";
+import { CLEANUP_MISSION, COMPANY_NAME } from "@/lib/pricing";
 
 const MIN_PASSWORD = 8;
 
@@ -240,6 +242,13 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           </>
         )}
       </p>
+
+      <div className="mt-8 flex flex-col items-center gap-2 border-t border-border/50 pt-6">
+        <BambooTideBrand variant="mark" dark />
+        <p className="max-w-xs text-center text-[10px] leading-relaxed text-muted">
+          A {COMPANY_NAME} product · {CLEANUP_MISSION}
+        </p>
+      </div>
     </div>
   );
 }

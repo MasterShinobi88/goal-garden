@@ -2,7 +2,7 @@
  * Goal Garden Premium
  *
  * Free: up to 3 active goals, mock/BYOK AI
- * Premium ($7.99 one-time): unlimited goals + badge + premium perks
+ * Premium ($7.99/mo subscription): unlimited goals + badge + supports product & cleanup
  *
  * Sources:
  *  - Account (Supabase profile) — works on any device when signed in
@@ -13,7 +13,11 @@
 "use client";
 
 import { isDesktopApp } from "./desktop";
-import { PREMIUM_PRICE_LABEL, PREMIUM_PRICE_USD } from "./pricing";
+import {
+  PREMIUM_PRICE_FULL,
+  PREMIUM_PRICE_LABEL,
+  PREMIUM_PRICE_USD,
+} from "./pricing";
 import { isDemoMode } from "./local-store";
 import { createClient, isSupabaseConfigured } from "./supabase/client";
 
@@ -178,7 +182,7 @@ export function canCreateAnotherGoal(activeGoalCount: number): {
   if (activeGoalCount < FREE_MAX_ACTIVE_GOALS) return { allowed: true };
   return {
     allowed: false,
-    reason: `Free includes ${FREE_MAX_ACTIVE_GOALS} active goals. Upgrade to Premium (${PREMIUM_PRICE_LABEL}) for unlimited gardens.`,
+    reason: `Free includes ${FREE_MAX_ACTIVE_GOALS} active goals. Upgrade to Premium (${PREMIUM_PRICE_FULL}) for unlimited gardens.`,
   };
 }
 
@@ -188,12 +192,13 @@ export function premiumBenefits(): string[] {
     "Premium badge in the garden",
     "Priority AI planning perks (with your keys or server keys)",
     "Syncs with your account on any device",
-    "Early access to desktop updates",
+    "Funds ongoing support & new features",
+    "10% of net proceeds → ocean & river cleanup",
   ];
 }
 
 export function premiumPriceLabel() {
-  return PREMIUM_PRICE_LABEL;
+  return PREMIUM_PRICE_FULL;
 }
 
 export function premiumPriceUsd() {

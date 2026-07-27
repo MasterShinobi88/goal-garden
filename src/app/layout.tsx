@@ -13,9 +13,17 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Goal Garden — Grow ambitious goals daily",
+  title: "Goal Garden by BambooTide — Grow ambitious goals daily",
   description:
-    "Premium goal coaching: milestones, healthy nutrition plans, calorie calculator, calendar sync, and a living progress tree.",
+    "Goal Garden by BambooTide: milestones, habits, calorie tools, calendar sync, and a living progress tree. Premium subscription supports the product — 10% of net proceeds to ocean & river cleanup.",
+  authors: [{ name: "BambooTide", url: "https://bambootide.org" }],
+  openGraph: {
+    title: "Goal Garden by BambooTide",
+    description:
+      "Calm goal planner. Free account · Premium subscription. 10% of net proceeds to ocean & river cleanup.",
+    url: "https://goal-garden.netlify.app",
+    siteName: "Goal Garden · BambooTide",
+  },
 };
 
 export default function RootLayout({

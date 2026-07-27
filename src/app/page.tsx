@@ -8,9 +8,14 @@ import {
   Shield,
 } from "lucide-react";
 import { GuestStartButton } from "@/components/GuestStartButton";
+import { BambooTideBrand } from "@/components/BambooTideBrand";
 import { isDemoMode } from "@/lib/local-store";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
-import { PREMIUM_PRICE_LABEL } from "@/lib/pricing";
+import {
+  CLEANUP_MISSION,
+  COMPANY_NAME,
+  PREMIUM_PRICE_FULL,
+} from "@/lib/pricing";
 
 const features = [
   {
@@ -63,14 +68,18 @@ export default function HomePage() {
         />
       </div>
 
-      <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/15 ring-1 ring-accent/25">
+      <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-6 py-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/15 ring-1 ring-accent/25">
             <TreePine className="h-5 w-5 text-accent" />
           </div>
-          <span className="text-sm font-semibold tracking-tight">Goal Garden</span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold tracking-tight">Goal Garden</p>
+            <p className="truncate text-[11px] text-muted">by {COMPANY_NAME}</p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          <BambooTideBrand variant="mark" className="hidden sm:inline-flex" dark />
           <Link href="/login" className="btn-ghost text-sm">
             Sign in
           </Link>
@@ -84,7 +93,7 @@ export default function HomePage() {
         <div className="animate-fade-up max-w-3xl">
           <p className="badge-soft mb-5">
             <Sparkles className="h-3.5 w-3.5" />
-            Premium goal coaching · calm by design
+            A {COMPANY_NAME} product · calm by design
           </p>
           <h1 className="text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl lg:text-[3.5rem]">
             Grow ambitious goals into{" "}
@@ -112,15 +121,14 @@ export default function HomePage() {
           </div>
 
           <p className="mt-4 text-xs text-muted/80">
-            Free · up to 3 active goals · Premium {PREMIUM_PRICE_LABEL} one-time ·{" "}
+            Free · up to 3 active goals · Premium {PREMIUM_PRICE_FULL} ·{" "}
+            {CLEANUP_MISSION}{" "}
             <a
               href="https://bambootide.org/apps/goal-garden"
               className="text-accent hover:underline"
             >
-              BambooTide
+              Learn more
             </a>
-            {" · "}
-            Your account keeps goals private &amp; available anywhere you sign in
           </p>
         </div>
 
@@ -141,8 +149,15 @@ export default function HomePage() {
         </div>
       </section>
 
-      <footer className="relative z-10 border-t border-border/60 py-6 text-center text-[11px] text-muted">
-        Goal Garden · Progress over perfection · Educational guidance only
+      <footer className="relative z-10 border-t border-border/60 px-6 py-8">
+        <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 sm:flex-row sm:justify-between">
+          <BambooTideBrand variant="full" className="w-full max-w-md" dark />
+          <p className="text-center text-[11px] text-muted sm:text-right">
+            Goal Garden · Progress over perfection
+            <br />
+            Educational guidance only · © {COMPANY_NAME}
+          </p>
+        </div>
       </footer>
     </main>
   );

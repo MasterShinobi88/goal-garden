@@ -1,22 +1,26 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Crown, ExternalLink, KeyRound, Sparkles } from "lucide-react";
+import { Crown, ExternalLink, KeyRound, Sparkles, Waves } from "lucide-react";
 import {
   activateLicense,
   clearLicense,
   getLicense,
   hasPremium,
   premiumBenefits,
-  premiumPriceLabel,
   refreshPremiumFromAccount,
   type LicenseState,
 } from "@/lib/license";
 import {
+  CLEANUP_MISSION,
+  COMPANY_NAME,
+  COMPANY_URL,
   getPremiumCheckoutUrl,
   PREMIUM_BILLING_NOTE,
+  PREMIUM_PRICE_FULL,
   premiumMarketingUrl,
 } from "@/lib/pricing";
+import { BambooTideBrand } from "@/components/BambooTideBrand";
 import { isDesktopApp } from "@/lib/desktop";
 import { cn } from "@/lib/utils";
 
@@ -28,7 +32,7 @@ export function PremiumLicenseCard() {
   );
   const [desktop, setDesktop] = useState(false);
   const checkout = getPremiumCheckoutUrl();
-  const price = premiumPriceLabel();
+  const price = PREMIUM_PRICE_FULL;
 
   useEffect(() => {
     setDesktop(isDesktopApp());
@@ -45,7 +49,7 @@ export function PremiumLicenseCard() {
     if (res.ok) {
       setMsg({
         type: "ok",
-        text: "Premium unlocked. It is saved on this device and on your account when signed in.",
+        text: "Premium unlocked. Saved on this device and on your account when signed in.",
       });
       setKey("");
       await refreshPremiumFromAccount();
@@ -57,7 +61,7 @@ export function PremiumLicenseCard() {
 
   function onClear() {
     clearLicense();
-    setMsg({ type: "ok", text: "Local license removed. Free limits apply." });
+    setMsg({ type: "ok", text: "Local license cache removed." });
     refresh();
   }
 
@@ -83,9 +87,9 @@ export function PremiumLicenseCard() {
           <p className="text-xs text-muted">
             {premium
               ? desktop
-                ? "Unlimited goals on this PC · account sync when signed in."
-                : "Unlimited goals · follows your signed-in account."
-              : `${price} one-time · unlimited gardens & premium perks.`}
+                ? "Subscription support · thanks for growing with us."
+                : "Subscription · follows your signed-in account."
+              : `${price} · supports product + cleanup mission.`}
           </p>
         </div>
         {premium ? (
@@ -97,6 +101,11 @@ export function PremiumLicenseCard() {
             {price}
           </span>
         )}
+      </div>
+
+      <div className="flex items-start gap-2 rounded-xl border border-sky-500/20 bg-sky-500/10 px-3 py-2.5 text-[11px] leading-relaxed text-sky-100/90">
+        <Waves className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sky-300" />
+        <span>{CLEANUP_MISSION} Same promise as {COMPANY_NAME}.</span>
       </div>
 
       {!premium && (
@@ -115,20 +124,20 @@ export function PremiumLicenseCard() {
             className="btn-primary w-full text-sm"
             onClick={onBuy}
           >
-            Buy Premium — {price}
+            Subscribe — {price}
             <ExternalLink className="h-3.5 w-3.5 opacity-80" />
           </button>
           <p className="text-[11px] text-muted">{PREMIUM_BILLING_NOTE}</p>
           {!checkout && (
             <p className="text-[11px] text-muted">
-              Checkout link is being finalized. You can also email{" "}
+              Checkout link is being connected. Email{" "}
               <a
                 className="text-accent hover:underline"
-                href="mailto:hello@bambootide.org?subject=Goal%20Garden%20Premium"
+                href="mailto:hello@bambootide.org?subject=Goal%20Garden%20Premium%20subscription"
               >
                 hello@bambootide.org
               </a>{" "}
-              to purchase, or use a key from your receipt below.
+              or use a key from your receipt below.
             </p>
           )}
         </>
@@ -147,7 +156,7 @@ export function PremiumLicenseCard() {
             )}
           </p>
           <p className="mt-0.5">
-            Activated {new Date(license.activatedAt).toLocaleDateString()} ·{" "}
+            Since {new Date(license.activatedAt).toLocaleDateString()} ·{" "}
             {license.source}
           </p>
         </div>
@@ -186,6 +195,21 @@ export function PremiumLicenseCard() {
           {msg.text}
         </p>
       )}
+
+      <div className="border-t border-border/60 pt-3">
+        <BambooTideBrand variant="compact" dark />
+        <p className="mt-2 text-[10px] text-muted">
+          A {COMPANY_NAME} product ·{" "}
+          <a
+            href={COMPANY_URL}
+            className="text-accent hover:underline"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            bambootide.org
+          </a>
+        </p>
+      </div>
     </section>
   );
 }

@@ -24,6 +24,8 @@ import { cn } from "@/lib/utils";
 import { demoSignOut, isDemoMode } from "@/lib/local-store";
 import { hasPremium } from "@/lib/license";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { BambooTideBrand } from "@/components/BambooTideBrand";
+import { CLEANUP_MISSION, COMPANY_NAME } from "@/lib/pricing";
 import {
   FIXED_BOTTOM,
   FIXED_TOP,
@@ -214,16 +216,17 @@ export function Sidebar({ userLabel }: { userLabel?: string | null }) {
         <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400/20 to-emerald-600/10 text-accent ring-1 ring-accent/25">
           <TreePine className="h-5 w-5" />
         </div>
-        <div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold tracking-tight">Goal Garden</p>
-            {premium && (
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-accent">
-                Premium
-              </p>
-            )}
-          </div>
-          <p className="text-[11px] text-muted">Grow with intention</p>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold tracking-tight">Goal Garden</p>
+          {premium ? (
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-accent">
+              Premium
+            </p>
+          ) : (
+            <p className="truncate text-[11px] text-muted">
+              by {COMPANY_NAME}
+            </p>
+          )}
         </div>
       </div>
 
@@ -333,6 +336,10 @@ export function Sidebar({ userLabel }: { userLabel?: string | null }) {
       </nav>
 
       <div className="border-t border-border/80 p-4">
+        <BambooTideBrand variant="compact" className="mb-3 px-1" dark />
+        <p className="mb-3 px-1 text-[10px] leading-snug text-muted/90">
+          {CLEANUP_MISSION}
+        </p>
         <div className="surface-inset mb-3 flex items-center gap-3 px-3 py-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400/30 to-sky-500/20 text-xs font-semibold text-accent">
             {(userLabel || "G").slice(0, 1).toUpperCase()}
