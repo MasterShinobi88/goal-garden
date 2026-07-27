@@ -8,6 +8,9 @@ import {
   Shield,
 } from "lucide-react";
 import { GuestStartButton } from "@/components/GuestStartButton";
+import { isDemoMode } from "@/lib/local-store";
+import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { PREMIUM_PRICE_LABEL } from "@/lib/pricing";
 
 const features = [
   {
@@ -95,14 +98,21 @@ export default function HomePage() {
           </p>
 
           <div className="mt-9 flex flex-wrap gap-3">
-            <GuestStartButton label="Plant your first goal" />
+            {/* Guest only when no cloud auth (local demo). Production uses real signup. */}
+            {isDemoMode() && !isSupabaseConfigured() ? (
+              <GuestStartButton label="Try locally" />
+            ) : (
+              <Link href="/signup" className="btn-primary px-5">
+                Create free account
+              </Link>
+            )}
             <Link href="/login" className="btn-ghost px-5">
               Sign in
             </Link>
           </div>
 
           <p className="mt-4 text-xs text-muted/80">
-            Free in the browser · Data stays on this device ·{" "}
+            Free · up to 3 active goals · Premium {PREMIUM_PRICE_LABEL} one-time ·{" "}
             <a
               href="https://bambootide.org/apps/goal-garden"
               className="text-accent hover:underline"
@@ -110,7 +120,7 @@ export default function HomePage() {
               BambooTide
             </a>
             {" · "}
-            Connect your own AI anytime in Settings
+            Your account keeps goals private &amp; available anywhere you sign in
           </p>
         </div>
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { MobileNav } from "@/components/MobileNav";
@@ -12,20 +13,39 @@ import {
 } from "@/components/Celebration";
 import { GentleReminders } from "@/components/GentleReminders";
 import { useAuthUser, useGoals } from "@/hooks/useGoals";
+import { isDemoMode } from "@/lib/local-store";
+import { isSupabaseConfigured } from "@/lib/supabase/client";
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
   const { user, loading } = useAuthUser();
   const { addGoal } = useGoals(user?.id);
   const [plantOpen, setPlantOpen] = useState(false);
+
+  useEffect(() => {
+    if (loading) return;
+    // Real accounts required when cloud auth is live
+    if (!user && isSupabaseConfigured() && !isDemoMode()) {
+      router.replace("/login?next=/dashboard");
+    }
+  }, [user, loading, router]);
 
   if (loading) {
     return (
       <div className="flex h-dvh flex-1 items-center justify-center">
         <LoadingSpinner label="Opening your garden…" />
+      </div>
+    );
+  }
+
+  if (!user && isSupabaseConfigured() && !isDemoMode()) {
+    return (
+      <div className="flex h-dvh flex-1 items-center justify-center">
+        <LoadingSpinner label="Redirecting to sign in…" />
       </div>
     );
   }

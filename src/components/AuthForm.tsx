@@ -3,9 +3,17 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, TreePine } from "lucide-react";
+import { Loader2, ShieldCheck, TreePine } from "lucide-react";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
-import { demoSignIn, demoSignUp, isDemoMode } from "@/lib/local-store";
+import {
+  demoSignIn,
+  demoSignUp,
+  isDemoMode,
+  requiresRealAccount,
+} from "@/lib/local-store";
+import { refreshPremiumFromAccount } from "@/lib/license";
+
+const MIN_PASSWORD = 8;
 
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const router = useRouter();
@@ -15,46 +23,79 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [info, setInfo] = useState<string | null>(null);
+  const demo = isDemoMode() || !isSupabaseConfigured();
+  const real = requiresRealAccount() && isSupabaseConfigured();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setInfo(null);
+
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes("@")) {
+      setError("Enter a valid email address.");
+      return;
+    }
+    if (password.length < MIN_PASSWORD) {
+      setError(`Password must be at least ${MIN_PASSWORD} characters.`);
+      return;
+    }
+
     setLoading(true);
 
     try {
-      if (!isSupabaseConfigured() || isDemoMode()) {
+      // Local demo only (desktop or explicit DEMO_MODE)
+      if (demo && !real) {
         if (mode === "signup") {
-          demoSignUp(email, password, name);
+          demoSignUp(cleanEmail, password, name);
         } else {
-          demoSignIn(email, password);
+          demoSignIn(cleanEmail, password);
         }
         router.push("/dashboard");
         router.refresh();
         return;
       }
 
+      if (!isSupabaseConfigured()) {
+        throw new Error(
+          "Accounts are not configured yet. Please try again later or contact hello@bambootide.org."
+        );
+      }
+
       const supabase = createClient();
       if (mode === "signup") {
-        const { error: signError } = await supabase.auth.signUp({
-          email,
+        const { data, error: signError } = await supabase.auth.signUp({
+          email: cleanEmail,
           password,
           options: {
-            data: { display_name: name || email.split("@")[0] },
+            data: {
+              display_name: (name || cleanEmail.split("@")[0]).trim(),
+            },
+            emailRedirectTo:
+              typeof window !== "undefined"
+                ? `${window.location.origin}/dashboard`
+                : undefined,
           },
         });
         if (signError) throw signError;
-        setInfo(
-          "Check your email to confirm if required — otherwise you're ready."
-        );
-        router.push("/dashboard");
-        router.refresh();
+
+        // Session present = email confirm off; otherwise ask to confirm
+        if (data.session) {
+          await refreshPremiumFromAccount();
+          router.push("/dashboard");
+          router.refresh();
+        } else {
+          setInfo(
+            "Account created. Check your email to confirm, then sign in. Your data is private to your account."
+          );
+        }
       } else {
         const { error: signError } = await supabase.auth.signInWithPassword({
-          email,
+          email: cleanEmail,
           password,
         });
         if (signError) throw signError;
+        await refreshPremiumFromAccount();
         router.push("/dashboard");
         router.refresh();
       }
@@ -72,16 +113,21 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           <TreePine className="h-7 w-7" />
         </div>
         <h1 className="text-2xl font-semibold tracking-tight">
-          {mode === "login" ? "Welcome back" : "Start growing"}
+          {mode === "login" ? "Welcome back" : "Create your garden"}
         </h1>
         <p className="mt-1.5 text-sm text-muted">
           {mode === "login"
-            ? "Sign in to tend your goals."
-            : "Create an account and plant your first big goal."}
+            ? "Sign in to access your goals on any device."
+            : "Real account · goals sync securely with your login."}
         </p>
-        {(!isSupabaseConfigured() || isDemoMode()) && (
+        {demo && !real ? (
           <p className="badge-soft mx-auto mt-3">
-            Demo mode · any email & password works
+            Local demo · data stays on this device
+          </p>
+        ) : (
+          <p className="mx-auto mt-3 inline-flex items-center gap-1.5 rounded-full border border-accent/20 bg-accent/10 px-3 py-1 text-[11px] font-medium text-accent">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            Encrypted auth · private to your account
           </p>
         )}
       </div>
@@ -123,15 +169,32 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
             type="password"
             className="input-field"
             required
-            minLength={6}
+            minLength={MIN_PASSWORD}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
+            placeholder={`At least ${MIN_PASSWORD} characters`}
             autoComplete={
               mode === "login" ? "current-password" : "new-password"
             }
           />
         </div>
+
+        {mode === "signup" && (
+          <p className="text-[11px] leading-relaxed text-muted">
+            By creating an account you agree we store your email and goal data
+            securely to provide the service. We never sell your personal data.
+            See{" "}
+            <a
+              href="https://bambootide.org/contact"
+              className="text-accent hover:underline"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              BambooTide contact
+            </a>{" "}
+            for privacy questions.
+          </p>
+        )}
 
         {error && (
           <p className="rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
@@ -158,14 +221,20 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         {mode === "login" ? (
           <>
             No account?{" "}
-            <Link href="/signup" className="font-medium text-accent hover:underline">
-              Sign up
+            <Link
+              href="/signup"
+              className="font-medium text-accent hover:underline"
+            >
+              Sign up free
             </Link>
           </>
         ) : (
           <>
             Already growing?{" "}
-            <Link href="/login" className="font-medium text-accent hover:underline">
+            <Link
+              href="/login"
+              className="font-medium text-accent hover:underline"
+            >
               Sign in
             </Link>
           </>

@@ -9,9 +9,17 @@ create table if not exists public.profiles (
   preferences jsonb not null default '{}'::jsonb,
   streak_count int not null default 0,
   last_active_date date,
+  -- Premium ($7.99 one-time) follows the account across devices
+  premium boolean not null default false,
+  premium_source text,
+  premium_activated_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.profiles add column if not exists premium boolean not null default false;
+alter table public.profiles add column if not exists premium_source text;
+alter table public.profiles add column if not exists premium_activated_at timestamptz;
 
 -- Goals
 create table if not exists public.goals (
@@ -33,6 +41,11 @@ create table if not exists public.goals (
 alter table public.goals add column if not exists category text not null default 'general';
 alter table public.goals add column if not exists health_profile jsonb;
 alter table public.goals add column if not exists health_plan jsonb;
+alter table public.goals add column if not exists savings_profile jsonb;
+alter table public.goals add column if not exists savings_plan jsonb;
+alter table public.goals add column if not exists earning_profile jsonb;
+alter table public.goals add column if not exists earning_plan jsonb;
+alter table public.goals add column if not exists plant_type text;
 
 create index if not exists goals_user_id_idx on public.goals(user_id);
 

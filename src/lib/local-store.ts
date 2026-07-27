@@ -26,18 +26,33 @@ export type DemoSession = {
   display_name: string;
 };
 
+/**
+ * Demo mode = local-only fake accounts (NOT for production web).
+ *
+ * Production browser: Supabase must be configured and DEMO_MODE must not be true.
+ * Desktop Electron: always local storage (offline-first).
+ */
 export function isDemoMode() {
-  // Desktop builds always use local storage (true standalone)
+  // Explicit force (local dev only)
+  if (process.env.NEXT_PUBLIC_DEMO_MODE === "true") return true;
+
+  // Desktop builds are offline-first on device storage
   if (process.env.NEXT_PUBLIC_DESKTOP === "true") return true;
   if (typeof window !== "undefined" && window.goalGarden?.isDesktop) {
     return true;
   }
+
+  // Web without Supabase falls back to demo so the site still boots in CI —
+  // Netlify production must set real Supabase env vars.
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  return (
-    !url ||
-    url.includes("your-project") ||
-    process.env.NEXT_PUBLIC_DEMO_MODE === "true"
-  );
+  if (!url || url.includes("your-project")) return true;
+
+  return false;
+}
+
+/** True when browser app expects real accounts (sign up / sign in). */
+export function requiresRealAccount() {
+  return !isDemoMode();
 }
 
 export function getSession(): DemoSession | null {

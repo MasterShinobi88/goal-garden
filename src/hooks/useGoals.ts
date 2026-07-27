@@ -4,10 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import type { GoalWithTree } from "@/lib/types";
 import {
   ensureSessionForDemo,
-  getSession,
   isDemoMode,
   loadGoals,
   loadStreak,
+  saveGoals,
 } from "@/lib/local-store";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import {
@@ -29,7 +29,7 @@ import {
 } from "@/lib/reschedule";
 import { getMockBusySlots } from "@/lib/calendar";
 import { calcGoalProgress } from "@/lib/utils";
-import { saveGoals } from "@/lib/local-store";
+import { refreshPremiumFromAccount } from "@/lib/license";
 
 export function useAuthUser() {
   const [user, setUser] = useState<{
@@ -41,8 +41,25 @@ export function useAuthUser() {
 
   useEffect(() => {
     let mounted = true;
+    let unsub: (() => void) | undefined;
+
+    function mapUser(u: {
+      id: string;
+      email?: string | null;
+      user_metadata?: { display_name?: string };
+    }) {
+      return {
+        id: u.id,
+        email: u.email,
+        name:
+          u.user_metadata?.display_name ||
+          u.email?.split("@")[0] ||
+          null,
+      };
+    }
 
     async function load() {
+      // Local demo / desktop only
       if (!isSupabaseConfigured() || isDemoMode()) {
         const s = ensureSessionForDemo();
         if (mounted) {
@@ -60,36 +77,49 @@ export function useAuthUser() {
         const supabase = createClient();
         const { data } = await supabase.auth.getUser();
         if (!mounted) return;
+
         if (data.user) {
-          setUser({
-            id: data.user.id,
-            email: data.user.email,
-            name:
-              (data.user.user_metadata?.display_name as string) ||
-              data.user.email?.split("@")[0],
-          });
+          setUser(mapUser(data.user));
+          await refreshPremiumFromAccount();
         } else {
-          // fallback demo session if misconfigured mid-session
-          const s = getSession();
-          if (s) {
-            setUser({ id: s.id, email: s.email, name: s.display_name });
+          // Real accounts: no silent fake user
+          setUser(null);
+        }
+
+        const {
+          data: { subscription },
+        } = supabase.auth.onAuthStateChange(async (_event, session) => {
+          if (!mounted) return;
+          if (session?.user) {
+            setUser(mapUser(session.user));
+            await refreshPremiumFromAccount();
           } else {
             setUser(null);
           }
-        }
+        });
+        unsub = () => subscription.unsubscribe();
       } catch {
-        const s = ensureSessionForDemo();
-        if (mounted) {
-          setUser({ id: s.id, email: s.email, name: s.display_name });
+        if (isDemoMode()) {
+          const s = ensureSessionForDemo();
+          if (mounted) {
+            setUser({
+              id: s.id,
+              email: s.email,
+              name: s.display_name,
+            });
+          }
+        } else if (mounted) {
+          setUser(null);
         }
       } finally {
         if (mounted) setLoading(false);
       }
     }
 
-    load();
+    void load();
     return () => {
       mounted = false;
+      unsub?.();
     };
   }, []);
 

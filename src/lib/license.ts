@@ -1,20 +1,21 @@
 /**
- * Goal Garden Premium license (local first, Lemon Squeezy-ready later)
+ * Goal Garden Premium
  *
- * Free tier: full local tracking; AI uses mock or user BYOK
- * Premium: unlocked AI server features, higher goal limits, badge
+ * Free: up to 3 active goals, mock/BYOK AI
+ * Premium ($7.99 one-time): unlimited goals + badge + premium perks
  *
- * Offline keys (v1 launch):
- *   GG-PREMIUM-LAUNCH
- *   GG-PREMIUM-BAMBOO
- *   GG-DEV-UNLOCK
- *
- * Later: validate against Lemon Squeezy and cache signed entitlement.
+ * Sources:
+ *  - Account (Supabase profile) — works on any device when signed in
+ *  - Local key / purchase receipt (desktop or offline cache)
+ *  - Launch keys (dev / press only — not sold)
  */
 
 "use client";
 
 import { isDesktopApp } from "./desktop";
+import { PREMIUM_PRICE_LABEL, PREMIUM_PRICE_USD } from "./pricing";
+import { isDemoMode } from "./local-store";
+import { createClient, isSupabaseConfigured } from "./supabase/client";
 
 const LICENSE_KEY = "goal-garden:license";
 const FREE_MAX_ACTIVE_GOALS = 3;
@@ -23,10 +24,10 @@ export type LicenseState = {
   key: string;
   activatedAt: string;
   tier: "premium";
-  source: "offline" | "store";
+  source: "offline" | "store" | "account";
 };
 
-/** Known offline unlock codes for launch / press / your own use */
+/** Dev / press only — never sell these as the $7.99 product */
 const OFFLINE_PREMIUM_KEYS = new Set([
   "GG-PREMIUM-LAUNCH",
   "GG-PREMIUM-BAMBOO",
@@ -58,9 +59,12 @@ export function clearLicense() {
   localStorage.removeItem(LICENSE_KEY);
 }
 
+function saveLocalLicense(license: LicenseState) {
+  localStorage.setItem(LICENSE_KEY, JSON.stringify(license));
+}
+
 /**
- * Activate a license key offline (v1).
- * Returns { ok, error? }
+ * Activate a license key (offline launch keys or store codes).
  */
 export function activateLicense(rawKey: string): {
   ok: boolean;
@@ -70,7 +74,6 @@ export function activateLicense(rawKey: string): {
   const key = normalizeKey(rawKey);
   if (!key) return { ok: false, error: "Enter a license key." };
 
-  // Offline launch keys
   if (OFFLINE_PREMIUM_KEYS.has(key)) {
     const license: LicenseState = {
       key,
@@ -78,30 +81,95 @@ export function activateLicense(rawKey: string): {
       tier: "premium",
       source: "offline",
     };
-    localStorage.setItem(LICENSE_KEY, JSON.stringify(license));
+    saveLocalLicense(license);
+    void persistPremiumToAccount(true, "offline_key");
     return { ok: true, license };
   }
 
-  // Future: GG-LS-… store keys validated online
   if (key.startsWith("GG-LS-") || key.startsWith("GG-")) {
     return {
       ok: false,
       error:
-        "That key format needs online activation (coming soon). Use a launch key or contact hello@bambootide.org.",
+        "Store keys activate after purchase. Use Buy Premium, or contact hello@bambootide.org with your receipt.",
     };
   }
 
   return {
     ok: false,
-    error: "Invalid license key. Check the code from your purchase email.",
+    error: "Invalid license key. Check your purchase email or contact support.",
   };
+}
+
+/** Mirror Premium onto Supabase profile so it follows the account. */
+export async function persistPremiumToAccount(
+  premium: boolean,
+  source = "store"
+): Promise<void> {
+  if (!isSupabaseConfigured() || isDemoMode()) return;
+  try {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase
+      .from("profiles")
+      .update({
+        premium,
+        premium_source: premium ? source : null,
+        premium_activated_at: premium ? new Date().toISOString() : null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", user.id);
+  } catch {
+    /* non-fatal — local license still works */
+  }
+}
+
+/**
+ * Load Premium from signed-in account (any device).
+ * Call on login / app boot when using Supabase.
+ */
+export async function refreshPremiumFromAccount(): Promise<boolean> {
+  if (!isSupabaseConfigured() || isDemoMode()) return hasPremium();
+  try {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return hasPremium();
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("premium, premium_activated_at, premium_source")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (error || !data) return hasPremium();
+
+    if (data.premium) {
+      saveLocalLicense({
+        key: "ACCOUNT",
+        activatedAt: data.premium_activated_at || new Date().toISOString(),
+        tier: "premium",
+        source: "account",
+      });
+      return true;
+    }
+
+    // Account is free — drop account-sourced local cache only
+    const local = getLicense();
+    if (local?.source === "account") clearLicense();
+    return hasPremium();
+  } catch {
+    return hasPremium();
+  }
 }
 
 export function freeMaxActiveGoals() {
   return FREE_MAX_ACTIVE_GOALS;
 }
 
-/** Free: max N active (non-archived) goals. Premium: unlimited. */
 export function canCreateAnotherGoal(activeGoalCount: number): {
   allowed: boolean;
   reason?: string;
@@ -110,17 +178,26 @@ export function canCreateAnotherGoal(activeGoalCount: number): {
   if (activeGoalCount < FREE_MAX_ACTIVE_GOALS) return { allowed: true };
   return {
     allowed: false,
-    reason: `Free includes ${FREE_MAX_ACTIVE_GOALS} active goals. Upgrade to Premium for unlimited gardens.`,
+    reason: `Free includes ${FREE_MAX_ACTIVE_GOALS} active goals. Upgrade to Premium (${PREMIUM_PRICE_LABEL}) for unlimited gardens.`,
   };
 }
 
 export function premiumBenefits(): string[] {
   return [
     "Unlimited active goals",
-    "Priority AI planning & coach (with your keys or server keys)",
     "Premium badge in the garden",
+    "Priority AI planning perks (with your keys or server keys)",
+    "Syncs with your account on any device",
     "Early access to desktop updates",
   ];
+}
+
+export function premiumPriceLabel() {
+  return PREMIUM_PRICE_LABEL;
+}
+
+export function premiumPriceUsd() {
+  return PREMIUM_PRICE_USD;
 }
 
 export function isDesktopLocalBuild() {
