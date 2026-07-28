@@ -348,12 +348,11 @@ export function syncMilestones(goals: GoalWithTree[]) {
   }));
 }
 
-const MIGRATE_FLAG = "goal-garden:local-goals-migrated:";
-
 /**
- * One-time: upload goals that only exist in this browser/device localStorage
+ * Upload goals that only exist in this browser/device localStorage
  * into the signed-in account when the cloud account is still empty.
- * Fixes desktop-offline → mobile sign-in empty garden.
+ * Re-runs whenever cloud is empty and local has goals (no permanent skip
+ * that blocks recovery).
  */
 export async function migrateLocalGoalsToCloud(
   userId: string
@@ -362,21 +361,8 @@ export async function migrateLocalGoalsToCloud(
     return { uploaded: 0, skipped: true, reason: "cloud_off" };
   }
 
-  try {
-    if (localStorage.getItem(MIGRATE_FLAG + userId) === "1") {
-      return { uploaded: 0, skipped: true, reason: "already_done" };
-    }
-  } catch {
-    /* ignore */
-  }
-
   const local = loadGoals().filter((g) => g && g.title);
   if (!local.length) {
-    try {
-      localStorage.setItem(MIGRATE_FLAG + userId, "1");
-    } catch {
-      /* ignore */
-    }
     return { uploaded: 0, skipped: true, reason: "no_local" };
   }
 
@@ -392,13 +378,8 @@ export async function migrateLocalGoalsToCloud(
     return { uploaded: 0, skipped: true, reason: "check_failed" };
   }
 
-  // Don't overwrite an account that already has goals
+  // Account already has cloud goals — keep them (don't duplicate)
   if (existing && existing.length > 0) {
-    try {
-      localStorage.setItem(MIGRATE_FLAG + userId, "1");
-    } catch {
-      /* ignore */
-    }
     return { uploaded: 0, skipped: true, reason: "cloud_has_goals" };
   }
 
@@ -414,18 +395,64 @@ export async function migrateLocalGoalsToCloud(
     }
   }
 
-  try {
-    localStorage.setItem(MIGRATE_FLAG + userId, "1");
-  } catch {
-    /* ignore */
+  if (uploaded > 0) {
+    try {
+      await fetchGoals(userId);
+    } catch {
+      /* ignore */
+    }
   }
 
-  // Refresh full tree from cloud
-  try {
-    await fetchGoals(userId);
-  } catch {
-    /* ignore */
-  }
+  return { uploaded, skipped: uploaded === 0, reason: uploaded ? undefined : "upload_failed" };
+}
 
-  return { uploaded, skipped: false };
+/**
+ * Force re-upload every local goal even if cloud has data (Settings recovery).
+ * Skips goals whose title already exists on the account.
+ */
+export async function forceUploadLocalGoals(
+  userId: string
+): Promise<{ uploaded: number; skipped: number }> {
+  if (!cloudOn() || !userId) return { uploaded: 0, skipped: 0 };
+  const local = loadGoals().filter((g) => g && g.title);
+  if (!local.length) return { uploaded: 0, skipped: 0 };
+
+  const supabase = createClient();
+  const { data: existing } = await supabase
+    .from("goals")
+    .select("id, title")
+    .eq("user_id", userId);
+
+  const titles = new Set(
+    (existing || []).map((g) => String(g.title || "").toLowerCase().trim())
+  );
+
+  let uploaded = 0;
+  let skipped = 0;
+  for (const g of local) {
+    const key = g.title.toLowerCase().trim();
+    if (titles.has(key)) {
+      skipped += 1;
+      continue;
+    }
+    try {
+      const saved = await insertGoalTree(supabase, userId, {
+        ...g,
+        user_id: userId,
+      });
+      localUpsert(saved);
+      titles.add(key);
+      uploaded += 1;
+    } catch (e) {
+      console.error("[goals] force upload failed", e);
+    }
+  }
+  if (uploaded > 0) {
+    try {
+      await fetchGoals(userId);
+    } catch {
+      /* ignore */
+    }
+  }
+  return { uploaded, skipped };
 }

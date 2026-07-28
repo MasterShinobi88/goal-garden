@@ -54,11 +54,11 @@ export default function DashboardLayout({
       <CelebrationBus />
       <GentleReminders />
       <OnboardingTour />
-      {/* Fixed viewport: only the page body (below fixed chrome) should scroll */}
+      {/* Mobile: one full-height scroll. Desktop: same, sidebar fixed. */}
       <div className="flex h-dvh max-h-dvh overflow-hidden">
         <Sidebar userLabel={user?.name || user?.email} />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden pb-[4.5rem] lg:pb-0">
-          <main className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pt-14 pb-3 sm:px-6 lg:px-8 lg:pt-6 lg:pb-4">
+          <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 pt-14 pb-6 sm:px-6 lg:px-8 lg:pt-6 lg:pb-4">
             {children}
           </main>
         </div>

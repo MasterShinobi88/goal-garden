@@ -144,20 +144,18 @@ export async function pushPrefsToCloud(prefs: UserPreferences): Promise<void> {
   if (!isSupabaseConfigured() || isDemoMode()) return;
   if (typeof window === "undefined") return;
   try {
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const payload = { ...prefs, theme: normalizeTheme(prefs.theme) };
-    await supabase
-      .from("profiles")
-      .update({
-        preferences: payload,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", user.id);
+    const { fetchProfilePreferences, writeProfilePreferences, collectGardenLocal } =
+      await import("./device-sync");
+    const existing = (await fetchProfilePreferences()) || {};
+    const garden_local =
+      (existing.garden_local as object | undefined) || collectGardenLocal();
+    const payload = {
+      ...existing,
+      ...prefs,
+      theme: normalizeTheme(prefs.theme),
+      garden_local,
+    };
+    await writeProfilePreferences(payload);
   } catch {
     /* non-fatal — local still works offline */
   }
@@ -205,6 +203,14 @@ export async function hydratePrefsForUser(
   }
 
   const cloud = await pullPrefsFromCloud();
+  // Always try habits/sleep sync with account
+  try {
+    const { pullGardenLocalFromCloud } = await import("./device-sync");
+    await pullGardenLocalFromCloud();
+  } catch {
+    /* ignore */
+  }
+
   if (cloud) {
     const cloudHasTheme =
       cloud.theme === "light" || cloud.theme === "dark";
@@ -238,5 +244,11 @@ export async function hydratePrefsForUser(
   applyTheme(normalizeTheme(local.theme));
   writeRaw(userId, local);
   void pushPrefsToCloud(local);
+  try {
+    const { pushGardenLocalToCloud } = await import("./device-sync");
+    await pushGardenLocalToCloud();
+  } catch {
+    /* ignore */
+  }
   return local;
 }

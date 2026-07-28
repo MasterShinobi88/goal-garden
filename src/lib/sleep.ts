@@ -41,6 +41,9 @@ export const DEFAULT_SLEEP_SCHEDULE: SleepSchedule = {
 
 function emit() {
   window.dispatchEvent(new CustomEvent("goal-garden:sleep"));
+  void import("./device-sync")
+    .then((m) => m.schedulePushGardenLocal())
+    .catch(() => undefined);
 }
 
 export function getSleepSchedule(): SleepSchedule {

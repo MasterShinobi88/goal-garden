@@ -152,46 +152,43 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-col overflow-hidden">
-      {/* Fixed top: hero */}
-      <div className="shrink-0">
-        <DashboardHero
-          compact
-          firstName={firstName}
-          quote={quote}
-          progress={focusedGoal ? treeProgress : 0}
-          gardenProgress={active.length ? overallProgress : 0}
-          streak={streak}
-          activeGoals={active.length}
-          completedTasks={completedTasks}
-          treeLabel={
-            focusedGoal ? focusedGoal.title : "Plant a goal to grow"
-          }
-          saplings={saplings}
-          selectedSaplingId={focusedGoalId}
-          onSelectSapling={(id) => {
-            setFocusedGoalId(id);
-            setDashTab("goals");
-          }}
-          demosOpen={demosOpen}
-          onToggleDemos={() => setDemosOpen((v) => !v)}
-          onDemo={(kind) => {
-            loadDemo(kind);
-            setDemosOpen(false);
-            setDashTab("goals");
-          }}
-          onNewGoal={() => setModalOpen(true)}
-        />
-      </div>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 pb-4">
+      {/* Hero scrolls with page on mobile — avoids a tiny bottom-only window */}
+      <DashboardHero
+        compact
+        firstName={firstName}
+        quote={quote}
+        progress={focusedGoal ? treeProgress : 0}
+        gardenProgress={active.length ? overallProgress : 0}
+        streak={streak}
+        activeGoals={active.length}
+        completedTasks={completedTasks}
+        treeLabel={
+          focusedGoal ? focusedGoal.title : "Plant a goal to grow"
+        }
+        saplings={saplings}
+        selectedSaplingId={focusedGoalId}
+        onSelectSapling={(id) => {
+          setFocusedGoalId(id);
+          setDashTab("goals");
+        }}
+        demosOpen={demosOpen}
+        onToggleDemos={() => setDemosOpen((v) => !v)}
+        onDemo={(kind) => {
+          loadDemo(kind);
+          setDemosOpen(false);
+          setDashTab("goals");
+        }}
+        onNewGoal={() => setModalOpen(true)}
+      />
 
       {error && (
-        <p className="mt-2 shrink-0 rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">
+        <p className="rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">
           {error}
         </p>
       )}
 
-      {/* Fixed top: section tabs */}
-      <div className="mt-2 flex shrink-0 flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex gap-1 rounded-xl border border-border bg-black/25 p-1">
           {tabs.map((t) => {
             const Icon = t.icon;
@@ -235,8 +232,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Scrollable lower pane only */}
-      <div className="mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5 pb-2">
+      <div className="space-y-4">
         {dashTab === "today" && (
           <div className="space-y-4">
             {reschedule && reschedule.proposals.length > 0 && (

@@ -179,6 +179,9 @@ function loadHabitsRaw(): Habit[] | null {
 function saveHabits(habits: Habit[]) {
   localStorage.setItem(HABITS_KEY, JSON.stringify(habits));
   window.dispatchEvent(new CustomEvent("goal-garden:habits"));
+  void import("./device-sync")
+    .then((m) => m.schedulePushGardenLocal())
+    .catch(() => undefined);
 }
 
 function loadDays(): Record<string, HabitDayState> {
@@ -196,6 +199,9 @@ function loadDays(): Record<string, HabitDayState> {
 function saveDays(map: Record<string, HabitDayState>) {
   localStorage.setItem(DAYS_KEY, JSON.stringify(map));
   window.dispatchEvent(new CustomEvent("goal-garden:habits"));
+  void import("./device-sync")
+    .then((m) => m.schedulePushGardenLocal())
+    .catch(() => undefined);
 }
 
 function sortByOrder(habits: Habit[]): Habit[] {

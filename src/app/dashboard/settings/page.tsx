@@ -19,6 +19,12 @@ import { isDemoMode } from "@/lib/local-store";
 import { loadPrefs, savePrefs } from "@/lib/prefs";
 import { normalizeTheme } from "@/lib/theme";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/client";
+import { forceUploadLocalGoals } from "@/lib/goals-service";
+import {
+  pullGardenLocalFromCloud,
+  pushGardenLocalToCloud,
+} from "@/lib/device-sync";
 import { AIConnectionSettings } from "@/components/AIConnectionSettings";
 import { NotificationSettings } from "@/components/NotificationSettings";
 import { DataImportExport } from "@/components/DataImportExport";
@@ -47,6 +53,8 @@ export default function SettingsPage() {
   const [prefs, setPrefs] = useState<UserPreferences>(loadPrefs());
   const [saved, setSaved] = useState(false);
   const [apiNote, setApiNote] = useState("");
+  const [syncNote, setSyncNote] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     setPrefs(loadPrefs());
@@ -336,6 +344,87 @@ export default function SettingsPage() {
                   : "."}
               </p>
             </div>
+
+            {isSupabaseConfigured() && !isDemoMode() && (
+              <div className="space-y-2 border-t border-border pt-3">
+                <p className="text-xs font-semibold text-foreground">
+                  Sync this device → account
+                </p>
+                <p className="text-[11px] text-muted leading-relaxed">
+                  If desktop goals or habits are missing on your phone, run this
+                  on the desktop browser where you can still see them, then open
+                  the app on mobile signed in with the same email.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={syncing}
+                    className="btn-primary text-xs"
+                    onClick={async () => {
+                      setSyncing(true);
+                      setSyncNote(null);
+                      try {
+                        const supabase = createClient();
+                        const {
+                          data: { user },
+                        } = await supabase.auth.getUser();
+                        if (!user) {
+                          setSyncNote("Sign in first, then try again.");
+                          return;
+                        }
+                        await pushGardenLocalToCloud();
+                        const goals = await forceUploadLocalGoals(user.id);
+                        setSyncNote(
+                          `Uploaded ${goals.uploaded} goal(s)` +
+                            (goals.skipped
+                              ? ` · skipped ${goals.skipped} already on account`
+                              : "") +
+                            " · habits & sleep pushed. Open mobile and refresh."
+                        );
+                      } catch (e) {
+                        setSyncNote(
+                          e instanceof Error
+                            ? e.message
+                            : "Sync failed — check connection."
+                        );
+                      } finally {
+                        setSyncing(false);
+                      }
+                    }}
+                  >
+                    {syncing ? "Syncing…" : "Upload this device now"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={syncing}
+                    className="btn-ghost text-xs"
+                    onClick={async () => {
+                      setSyncing(true);
+                      setSyncNote(null);
+                      try {
+                        await pullGardenLocalFromCloud();
+                        setSyncNote(
+                          "Pulled habits & sleep from your account onto this device."
+                        );
+                      } catch (e) {
+                        setSyncNote(
+                          e instanceof Error ? e.message : "Pull failed."
+                        );
+                      } finally {
+                        setSyncing(false);
+                      }
+                    }}
+                  >
+                    Pull from account
+                  </button>
+                </div>
+                {syncNote && (
+                  <p className="text-[11px] text-accent leading-relaxed">
+                    {syncNote}
+                  </p>
+                )}
+              </div>
+            )}
           </section>
         )}
 
