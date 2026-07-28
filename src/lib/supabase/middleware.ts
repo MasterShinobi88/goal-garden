@@ -1,18 +1,15 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { isValidSupabaseProjectUrl, normalizeSupabaseUrl } from "./url";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const url = normalizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
 
-  // Demo mode: no Supabase — allow all routes
-  if (
-    !url ||
-    !key ||
-    url.includes("your-project")
-  ) {
+  // Demo / misconfigured Supabase — allow routes without auth middleware
+  if (!url || !key || !isValidSupabaseProjectUrl(url)) {
     return supabaseResponse;
   }
 

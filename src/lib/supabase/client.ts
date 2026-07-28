@@ -1,18 +1,22 @@
 import { createBrowserClient } from "@supabase/ssr";
+import { isValidSupabaseProjectUrl, normalizeSupabaseUrl } from "./url";
 
 export function isSupabaseConfigured() {
-  return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
-      !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("your-project")
-  );
+  const url = normalizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+  return Boolean(url && key && isValidSupabaseProjectUrl(url) && key.length > 20);
 }
 
 export function createClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const url = normalizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
   if (!url || !key) {
     throw new Error("Supabase env vars missing");
+  }
+  if (!isValidSupabaseProjectUrl(url)) {
+    throw new Error(
+      "NEXT_PUBLIC_SUPABASE_URL looks invalid. Use only https://YOURPROJECT.supabase.co (no /rest/v1)."
+    );
   }
   return createBrowserClient(url, key);
 }

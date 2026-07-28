@@ -46,13 +46,18 @@ export function requiresRealAccount(): boolean {
 }
 
 export function isSupabaseEnvConfigured(): boolean {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  // Lazy import path avoided — keep this file free of client boundaries
+  const raw = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || "";
+  let url = raw.replace(/^["']|["']$/g, "").replace(/\/+$/, "");
+  url = url.replace(/\/rest\/v1.*$/i, "");
+  url = url.replace(/\/auth\/v1.*$/i, "");
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
   return Boolean(
     url &&
       key &&
       !url.includes("your-project") &&
       key.length > 20 &&
-      !key.includes("your-anon")
+      !key.includes("your-anon") &&
+      url.startsWith("https://")
   );
 }

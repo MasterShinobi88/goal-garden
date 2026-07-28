@@ -13,10 +13,13 @@ export async function GET(request: Request) {
 
   if (code) {
     const cookieStore = await cookies();
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const { normalizeSupabaseUrl, isValidSupabaseProjectUrl } = await import(
+      "@/lib/supabase/url"
+    );
+    const url = normalizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
 
-    if (url && key && !url.includes("your-project")) {
+    if (url && key && isValidSupabaseProjectUrl(url)) {
       const supabase = createServerClient(url, key, {
         cookies: {
           getAll() {
