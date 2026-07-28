@@ -32,9 +32,10 @@ Netlify already sets `NEXT_PUBLIC_DEMO_MODE=false`. You still need **Supabase**.
 1. **Authentication → Providers → Email** → enabled  
 2. **Confirm email** → **ON** (required — Goal Garden blocks unverified users)  
 3. **URL configuration** (Auth → URL Configuration):  
-   - **Site URL:** `https://goal-garden.netlify.app`  
+   - **Site URL:** `https://garden.bambootide.org`  
    - **Redirect URLs** add:  
-     - `https://goal-garden.netlify.app/auth/callback`  
+     - `https://garden.bambootide.org/auth/callback`
+     - `https://garden.bambootide.org/auth/handoff`  
      - `http://localhost:3000/auth/callback` (local dev)
 
 ### 4. Copy keys
@@ -55,7 +56,7 @@ Site **goal-garden** → Environment variables (Production):
 | `NEXT_PUBLIC_DEMO_MODE` | `false` |
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://xxxx.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | your anon key |
-| `NEXT_PUBLIC_SITE_URL` | `https://goal-garden.netlify.app` |
+| `NEXT_PUBLIC_SITE_URL` | `https://garden.bambootide.org` |
 
 ### 6. Redeploy
 
@@ -63,7 +64,7 @@ Deploys → **Trigger deploy** (or push to GitHub).
 
 ### 7. Test
 
-1. Open https://goal-garden.netlify.app/signup  
+1. Open https://garden.bambootide.org/signup  
 2. Use a **real** email + password (8+ chars) + display name  
 3. App says **check your email** — you are **not** signed in yet  
 4. Open the confirmation link → lands on `/auth/callback` → dashboard  

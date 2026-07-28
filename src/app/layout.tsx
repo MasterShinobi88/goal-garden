@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     title: "Goal Garden by BambooTide",
     description:
       "Calm goal planner. Free account · Premium subscription. 10% of net proceeds to ocean & river cleanup.",
-    url: "https://goal-garden.netlify.app",
+    url: "https://garden.bambootide.org",
     siteName: "Goal Garden · BambooTide",
   },
 };

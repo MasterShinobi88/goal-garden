@@ -24,7 +24,7 @@ Yes — a **subscription** is better if you need ongoing support. One-time sales
 3. **Recurring** → **Monthly** → **$7.99**  
 4. Save product  
 5. **Payment links** → **New** → select this product  
-6. Optional success URL: `https://goal-garden.netlify.app/dashboard/settings`  
+6. Optional success URL: `https://garden.bambootide.org/dashboard/settings`  
 7. Copy the link (`https://buy.stripe.com/...`)  
 
 ### Netlify env

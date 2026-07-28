@@ -29,7 +29,7 @@ Secret key is read only on the server as `STRIPE_SECRET_KEY`.
 | `STRIPE_PRICE_ID` | Optional | `price_…` from Dashboard (monthly $7.99) |
 | `STRIPE_WEBHOOK_SECRET` | Optional | `whsec_…` after webhook endpoint |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server only | unlocks Premium on profile from webhook |
-| `NEXT_PUBLIC_SITE_URL` | Public | `https://goal-garden.netlify.app` |
+| `NEXT_PUBLIC_SITE_URL` | Public | `https://garden.bambootide.org` |
 | `NEXT_PUBLIC_PREMIUM_CHECKOUT_URL` | Optional fallback | Payment Link if API fails |
 
 **Do not** set `NEXT_PUBLIC_STRIPE_SECRET_KEY` (never expose `sk_` to the browser).
@@ -82,7 +82,7 @@ We **do not** use `managed_payments` blueprints or hardcode keys.
 ## Webhooks (recommended)
 
 1. Stripe → **Developers → Webhooks → Add endpoint**  
-2. URL: `https://goal-garden.netlify.app/api/stripe/webhook`  
+2. URL: `https://garden.bambootide.org/api/stripe/webhook`  
 3. Events:  
    - `checkout.session.completed`  
    - `customer.subscription.updated`  

@@ -49,7 +49,7 @@ export default function AuthHandoffPage() {
         }
         if (!cancelled) {
           setMessage("Signed in — opening your garden…");
-          window.location.replace("/");
+          window.location.replace("/dashboard");
         }
       } catch (e) {
         if (!cancelled) {

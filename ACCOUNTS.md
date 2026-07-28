@@ -27,7 +27,7 @@ Site → **Environment variables** → add:
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://xxxx.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon key |
 | `NEXT_PUBLIC_DEMO_MODE` | `false` |
-| `NEXT_PUBLIC_SITE_URL` | `https://goal-garden.netlify.app` |
+| `NEXT_PUBLIC_SITE_URL` | `https://garden.bambootide.org` |
 | `NEXT_PUBLIC_PREMIUM_CHECKOUT_URL` | Lemon/Stripe checkout (when ready) |
 
 Then **Trigger deploy**.
