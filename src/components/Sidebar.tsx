@@ -7,6 +7,7 @@ import {
   Calculator,
   CalendarDays,
   ClipboardList,
+  Crown,
   Flame,
   GripVertical,
   LayoutDashboard,
@@ -14,6 +15,7 @@ import {
   Menu,
   MessageCircle,
   Settings,
+  Sparkles,
   TreePine,
   Wallet,
   X,
@@ -25,7 +27,11 @@ import { demoSignOut, isDemoMode } from "@/lib/local-store";
 import { hasPremium } from "@/lib/license";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { BambooTideBrand } from "@/components/BambooTideBrand";
-import { CLEANUP_MISSION, COMPANY_NAME } from "@/lib/pricing";
+import {
+  CLEANUP_MISSION,
+  COMPANY_NAME,
+  PREMIUM_PRICE_FULL,
+} from "@/lib/pricing";
 import {
   FIXED_BOTTOM,
   FIXED_TOP,
@@ -326,7 +332,33 @@ export function Sidebar({ userLabel }: { userLabel?: string | null }) {
           })}
         </div>
 
-        <div className="mt-2 border-t border-border/60 pt-2">
+        <div className="mt-2 shrink-0 space-y-2 border-t border-border/60 pt-3">
+          {!premium && (
+            <Link
+              href="/dashboard/settings?tab=premium"
+              onClick={() => setOpen(false)}
+              className="group mx-0.5 flex items-center gap-2.5 rounded-xl border border-accent/35 bg-gradient-to-r from-accent/20 via-emerald-500/10 to-amber-500/10 px-3 py-2.5 shadow-[0_0_24px_rgba(52,211,153,0.12)] transition hover:border-accent/55 hover:from-accent/25"
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/20 text-accent ring-1 ring-accent/30">
+                <Crown className="h-4 w-4" />
+              </span>
+              <span className="min-w-0 flex-1 text-left">
+                <span className="flex items-center gap-1 text-xs font-semibold text-foreground">
+                  Upgrade to Premium
+                  <Sparkles className="h-3 w-3 text-accent opacity-80" />
+                </span>
+                <span className="block text-[10px] text-muted">
+                  Unlimited goals · {PREMIUM_PRICE_FULL}
+                </span>
+              </span>
+            </Link>
+          )}
+          {premium && (
+            <div className="mx-0.5 flex items-center gap-2 rounded-xl border border-accent/25 bg-accent/10 px-3 py-2 text-xs font-medium text-accent">
+              <Crown className="h-3.5 w-3.5 shrink-0" />
+              Premium active
+            </div>
+          )}
           <FixedLink
             href={FIXED_BOTTOM.href}
             label={FIXED_BOTTOM.label}

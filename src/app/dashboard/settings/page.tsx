@@ -48,12 +48,33 @@ export default function SettingsPage() {
     setPrefs(loadPrefs());
   }, []);
 
-  // Stripe returns here with ?checkout=success|cancel — open Premium tab
+  // Deep-link: ?tab=premium or Stripe return ?checkout=success|cancel
   useEffect(() => {
     if (typeof window === "undefined") return;
     const q = new URLSearchParams(window.location.search);
-    if (q.get("checkout") || q.get("session_id")) {
-      setTab("premium");
+    const tabParam = q.get("tab");
+    if (
+      tabParam === "premium" ||
+      tabParam === "ai" ||
+      tabParam === "preferences" ||
+      tabParam === "reminders" ||
+      tabParam === "data" ||
+      tabParam === "advanced" ||
+      q.get("checkout") ||
+      q.get("session_id")
+    ) {
+      if (
+        tabParam === "premium" ||
+        tabParam === "ai" ||
+        tabParam === "preferences" ||
+        tabParam === "reminders" ||
+        tabParam === "data" ||
+        tabParam === "advanced"
+      ) {
+        setTab(tabParam);
+      } else {
+        setTab("premium");
+      }
     }
   }, []);
 
