@@ -27,6 +27,15 @@ Netlify already sets `NEXT_PUBLIC_DEMO_MODE=false`. You still need **Supabase**.
 2. Paste **all** of `supabase/schema.sql` from the Goal Garden repo  
 3. Run it  
 
+If the app later shows **`permission denied for table goals`**:
+
+1. SQL Editor → New query  
+2. Paste **all** of `supabase/fix_permissions.sql`  
+3. Run it  
+4. Hard-refresh the app and try **Settings → Upload this device now** again  
+
+That script grants `authenticated` access and rebuilds RLS policies (safe to re-run).
+
 ### 3. Enable email login + **require verification**
 
 1. **Authentication → Providers → Email** → enabled  
