@@ -9,6 +9,7 @@ import {
   loadStreak,
   saveGoals,
 } from "@/lib/local-store";
+import { hydratePrefsForUser } from "@/lib/prefs";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import {
   archiveGoal,
@@ -68,6 +69,7 @@ export function useAuthUser() {
             email: s.email,
             name: s.display_name,
           });
+          await hydratePrefsForUser(s.id);
           setLoading(false);
         }
         return;
@@ -77,6 +79,7 @@ export function useAuthUser() {
         // Production without Supabase: no fake login
         if (mounted) {
           setUser(null);
+          await hydratePrefsForUser(null);
           setLoading(false);
         }
         return;
@@ -90,9 +93,11 @@ export function useAuthUser() {
         if (data.user) {
           setUser(mapUser(data.user));
           await refreshPremiumFromAccount();
+          await hydratePrefsForUser(data.user.id);
         } else {
           // Real accounts: no silent fake user
           setUser(null);
+          await hydratePrefsForUser(null);
         }
 
         const {
@@ -102,8 +107,10 @@ export function useAuthUser() {
           if (session?.user) {
             setUser(mapUser(session.user));
             await refreshPremiumFromAccount();
+            await hydratePrefsForUser(session.user.id);
           } else {
             setUser(null);
+            await hydratePrefsForUser(null);
           }
         });
         unsub = () => subscription.unsubscribe();
@@ -116,9 +123,11 @@ export function useAuthUser() {
               email: s.email,
               name: s.display_name,
             });
+            await hydratePrefsForUser(s.id);
           }
         } else if (mounted) {
           setUser(null);
+          await hydratePrefsForUser(null);
         }
       } finally {
         if (mounted) setLoading(false);

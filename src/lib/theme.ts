@@ -28,7 +28,9 @@ export function readStoredTheme(): ThemeMode {
     const raw = localStorage.getItem("goal-garden:prefs");
     if (raw) {
       const prefs = JSON.parse(raw) as { theme?: string };
-      return normalizeTheme(prefs.theme);
+      if (prefs.theme === "light" || prefs.theme === "dark") {
+        return prefs.theme;
+      }
     }
   } catch {
     /* ignore */

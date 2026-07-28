@@ -15,8 +15,9 @@ import {
   Sun,
 } from "lucide-react";
 import type { UserPreferences } from "@/lib/types";
-import { loadPrefs, savePrefs, isDemoMode } from "@/lib/local-store";
-import { applyTheme, normalizeTheme } from "@/lib/theme";
+import { isDemoMode } from "@/lib/local-store";
+import { loadPrefs, savePrefs } from "@/lib/prefs";
+import { normalizeTheme } from "@/lib/theme";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { AIConnectionSettings } from "@/components/AIConnectionSettings";
 import { NotificationSettings } from "@/components/NotificationSettings";
@@ -88,11 +89,13 @@ export default function SettingsPage() {
     setPrefs((p) => {
       const next = { ...p, [key]: value };
       if (key === "theme") {
-        applyTheme(normalizeTheme(value));
+        next.theme = normalizeTheme(value);
       }
+      // Auto-save so refresh / other devices keep the choice without a second click
+      savePrefs(next);
       return next;
     });
-    setSaved(false);
+    setSaved(true);
   }
 
   return (
@@ -314,7 +317,6 @@ export default function SettingsPage() {
                 type="button"
                 className="btn-primary text-sm"
                 onClick={() => {
-                  applyTheme(normalizeTheme(prefs.theme));
                   savePrefs(prefs);
                   setSaved(true);
                 }}
@@ -324,11 +326,14 @@ export default function SettingsPage() {
                 ) : (
                   <Save className="h-4 w-4" />
                 )}
-                {saved ? "Saved" : "Save preferences"}
+                {saved ? "Saved to your account" : "Save preferences"}
               </button>
               <p className="text-[11px] text-muted">
                 Theme: {(prefs.theme || "dark") === "light" ? "Light" : "Dark"}{" "}
-                · Dark is the default for new gardens.
+                · Changes auto-save on this device
+                {isSupabaseConfigured() && !isDemoMode()
+                  ? " and sync to your signed-in account."
+                  : "."}
               </p>
             </div>
           </section>

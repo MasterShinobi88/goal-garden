@@ -1,10 +1,6 @@
 "use client";
 
-import type {
-  GoalWithTree,
-  UserPreferences,
-  WeeklyReview,
-} from "./types";
+import type { GoalWithTree, WeeklyReview } from "./types";
 import { buildDemoGoal, buildDemoWeightLossGoal } from "./demo-data";
 import {
   uid,
@@ -13,9 +9,20 @@ import {
   autoCompleteMilestones,
   weekStartISO,
 } from "./utils";
+import {
+  isDemoMode as isDemoModeEnv,
+  requiresRealAccount as requiresRealAccountEnv,
+} from "./runtime-mode";
+import {
+  loadPrefs,
+  savePrefs,
+  hydratePrefsForUser,
+  bindPrefsUser,
+  resolveTheme,
+  pushPrefsToCloud,
+} from "./prefs";
 
 const GOALS_KEY = "goal-garden:goals";
-const PREFS_KEY = "goal-garden:prefs";
 const STREAK_KEY = "goal-garden:streak";
 const SESSION_KEY = "goal-garden:session";
 const REVIEWS_KEY = "goal-garden:reviews";
@@ -26,10 +33,14 @@ export type DemoSession = {
   display_name: string;
 };
 
-import {
-  isDemoMode as isDemoModeEnv,
-  requiresRealAccount as requiresRealAccountEnv,
-} from "./runtime-mode";
+export {
+  loadPrefs,
+  savePrefs,
+  hydratePrefsForUser,
+  bindPrefsUser,
+  resolveTheme,
+  pushPrefsToCloud,
+};
 
 /**
  * Demo mode = local-only fake accounts (NOT for production web).
@@ -103,46 +114,6 @@ export function loadGoals(): GoalWithTree[] {
 export function saveGoals(goals: GoalWithTree[]) {
   localStorage.setItem(GOALS_KEY, JSON.stringify(goals));
   window.dispatchEvent(new CustomEvent("goal-garden:update"));
-}
-
-export function loadPrefs(): UserPreferences {
-  if (typeof window === "undefined") return defaultPrefs();
-  const raw = localStorage.getItem(PREFS_KEY);
-  if (!raw) return defaultPrefs();
-  try {
-    return { ...defaultPrefs(), ...(JSON.parse(raw) as UserPreferences) };
-  } catch {
-    return defaultPrefs();
-  }
-}
-
-export function savePrefs(prefs: UserPreferences) {
-  localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
-  try {
-    window.dispatchEvent(new CustomEvent("goal-garden:prefs"));
-  } catch {
-    /* ignore */
-  }
-}
-
-function defaultPrefs(): UserPreferences {
-  return {
-    calendar_provider: "mock",
-    work_start_hour: 9,
-    work_end_hour: 17,
-    encouragement_style: "gentle",
-    sunday_review_enabled: true,
-    theme: "dark",
-    sound_enabled: false,
-    reduced_motion: false,
-    grace_day_used: null,
-    notifications_enabled: false,
-    notifications_daily: true,
-    notifications_weekly: true,
-    notifications_hour: 9,
-    notifications_quiet_start: 21,
-    notifications_quiet_end: 8,
-  };
 }
 
 export function loadStreak(): { streak: number; lastActive: string | null } {
