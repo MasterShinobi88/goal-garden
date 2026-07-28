@@ -140,6 +140,16 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
 
+-- Grants (required — otherwise clients get "permission denied for table …")
+grant usage on schema public to postgres, anon, authenticated, service_role;
+grant all on table public.profiles to postgres, anon, authenticated, service_role;
+grant all on table public.goals to postgres, anon, authenticated, service_role;
+grant all on table public.milestones to postgres, anon, authenticated, service_role;
+grant all on table public.daily_tasks to postgres, anon, authenticated, service_role;
+grant all on table public.weekly_reviews to postgres, anon, authenticated, service_role;
+grant all on table public.journal_entries to postgres, anon, authenticated, service_role;
+grant usage, select on all sequences in schema public to anon, authenticated, service_role;
+
 -- RLS
 alter table public.profiles enable row level security;
 alter table public.goals enable row level security;
@@ -149,19 +159,21 @@ alter table public.weekly_reviews enable row level security;
 
 -- Profiles policies
 create policy "Users can view own profile"
-  on public.profiles for select using (auth.uid() = id);
+  on public.profiles for select to authenticated using (auth.uid() = id);
 create policy "Users can update own profile"
-  on public.profiles for update using (auth.uid() = id);
+  on public.profiles for update to authenticated using (auth.uid() = id) with check (auth.uid() = id);
+create policy "Users can insert own profile"
+  on public.profiles for insert to authenticated with check (auth.uid() = id);
 
 -- Goals policies
 create policy "Users can view own goals"
-  on public.goals for select using (auth.uid() = user_id);
+  on public.goals for select to authenticated using (auth.uid() = user_id);
 create policy "Users can insert own goals"
-  on public.goals for insert with check (auth.uid() = user_id);
+  on public.goals for insert to authenticated with check (auth.uid() = user_id);
 create policy "Users can update own goals"
-  on public.goals for update using (auth.uid() = user_id);
+  on public.goals for update to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "Users can delete own goals"
-  on public.goals for delete using (auth.uid() = user_id);
+  on public.goals for delete to authenticated using (auth.uid() = user_id);
 
 -- Milestones: access via goal ownership
 create policy "Users can view own milestones"
