@@ -99,8 +99,11 @@ export function DailyHabitsPanel({ compact: _compact }: { compact?: boolean }) {
 
   return (
     <section className="grid gap-3 lg:grid-cols-[1.25fr_0.95fr]">
-      {/* Left column: sortable habit list */}
-      <div className="card flex min-h-0 flex-col overflow-hidden p-0">
+      {/* Left column: sortable habit list
+          Do not nest overflow-y-auto + overscroll-contain here — without a max
+          height the list traps the mouse wheel and the dashboard pane won't scroll
+          until the pointer moves over Sleep / another non-trapping area. */}
+      <div className="card flex flex-col p-0">
         <div className="flex items-start justify-between gap-2 border-b border-border/60 px-4 py-3">
           <div>
             <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-accent">
@@ -144,7 +147,7 @@ export function DailyHabitsPanel({ compact: _compact }: { compact?: boolean }) {
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain p-3">
+        <div className="space-y-1 p-3">
           {orderedHabits.length === 0 ? (
             <p className="px-2 py-6 text-center text-xs text-muted">
               No active habits — add a tiny one you can repeat daily.
