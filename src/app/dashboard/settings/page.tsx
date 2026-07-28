@@ -7,13 +7,16 @@ import {
   Crown,
   FileUp,
   KeyRound,
+  Moon,
   Plug,
   Save,
   Settings2,
   Sparkles,
+  Sun,
 } from "lucide-react";
 import type { UserPreferences } from "@/lib/types";
 import { loadPrefs, savePrefs, isDemoMode } from "@/lib/local-store";
+import { applyTheme, normalizeTheme } from "@/lib/theme";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { AIConnectionSettings } from "@/components/AIConnectionSettings";
 import { NotificationSettings } from "@/components/NotificationSettings";
@@ -82,7 +85,13 @@ export default function SettingsPage() {
     key: K,
     value: UserPreferences[K]
   ) {
-    setPrefs((p) => ({ ...p, [key]: value }));
+    setPrefs((p) => {
+      const next = { ...p, [key]: value };
+      if (key === "theme") {
+        applyTheme(normalizeTheme(value));
+      }
+      return next;
+    });
     setSaved(false);
   }
 
@@ -220,6 +229,44 @@ export default function SettingsPage() {
                   <option value="minimal">Minimal</option>
                 </select>
               </div>
+
+              <div className="sm:col-span-2">
+                <label className="mb-1.5 block text-xs text-muted">
+                  Appearance
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => update("theme", "light")}
+                    className={cn(
+                      "flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium transition",
+                      (prefs.theme || "dark") === "light"
+                        ? "border-accent/50 bg-accent/15 text-accent"
+                        : "border-border bg-black/20 text-muted hover:border-accent/30 hover:text-foreground"
+                    )}
+                  >
+                    <Sun className="h-4 w-4" />
+                    Light
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => update("theme", "dark")}
+                    className={cn(
+                      "flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium transition",
+                      (prefs.theme || "dark") === "dark"
+                        ? "border-accent/50 bg-accent/15 text-accent"
+                        : "border-border bg-black/20 text-muted hover:border-accent/30 hover:text-foreground"
+                    )}
+                  >
+                    <Moon className="h-4 w-4" />
+                    Dark
+                  </button>
+                </div>
+                <p className="mt-1.5 text-[11px] text-muted">
+                  Light matches BambooTide sand &amp; tide green. Preview applies
+                  immediately — click Save to keep it.
+                </p>
+              </div>
             </div>
 
             <div className="grid gap-2 sm:grid-cols-2">
@@ -267,6 +314,7 @@ export default function SettingsPage() {
                 type="button"
                 className="btn-primary text-sm"
                 onClick={() => {
+                  applyTheme(normalizeTheme(prefs.theme));
                   savePrefs(prefs);
                   setSaved(true);
                 }}
@@ -278,7 +326,10 @@ export default function SettingsPage() {
                 )}
                 {saved ? "Saved" : "Save preferences"}
               </button>
-              <p className="text-[11px] text-muted">Dark theme is default.</p>
+              <p className="text-[11px] text-muted">
+                Theme: {(prefs.theme || "dark") === "light" ? "Light" : "Dark"}{" "}
+                · Dark is the default for new gardens.
+              </p>
             </div>
           </section>
         )}

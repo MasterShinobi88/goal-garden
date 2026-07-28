@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   CLEANUP_MISSION,
   COMPANY_NAME,
@@ -14,7 +15,7 @@ type Props = {
   /** compact = sidebar / header chip; full = footer block */
   variant?: "compact" | "full" | "mark";
   className?: string;
-  /** Prefer dark-background logo asset */
+  /** Prefer dark-background logo asset. If omitted, follows app theme. */
   dark?: boolean;
 };
 
@@ -24,9 +25,28 @@ type Props = {
 export function BambooTideBrand({
   variant = "compact",
   className,
-  dark = true,
+  dark,
 }: Props) {
-  const src = dark ? companyLogoDarkUrl() : companyLogoUrl();
+  const [isDark, setIsDark] = useState(dark !== false);
+
+  useEffect(() => {
+    if (typeof dark === "boolean") {
+      setIsDark(dark);
+      return;
+    }
+    function sync() {
+      setIsDark(!document.documentElement.classList.contains("light"));
+    }
+    sync();
+    const mo = new MutationObserver(sync);
+    mo.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+    return () => mo.disconnect();
+  }, [dark]);
+
+  const src = isDark ? companyLogoDarkUrl() : companyLogoUrl();
 
   if (variant === "mark") {
     return (

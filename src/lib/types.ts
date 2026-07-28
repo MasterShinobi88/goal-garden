@@ -20,7 +20,7 @@ export type UserPreferences = {
   work_end_hour?: number;
   encouragement_style?: "gentle" | "energetic" | "minimal";
   sunday_review_enabled?: boolean;
-  theme?: "dark";
+  theme?: "dark" | "light";
   /** Soft leaf chime on task complete */
   sound_enabled?: boolean;
   /** Less motion / simpler celebrations */

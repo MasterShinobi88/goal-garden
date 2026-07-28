@@ -118,6 +118,11 @@ export function loadPrefs(): UserPreferences {
 
 export function savePrefs(prefs: UserPreferences) {
   localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+  try {
+    window.dispatchEvent(new CustomEvent("goal-garden:prefs"));
+  } catch {
+    /* ignore */
+  }
 }
 
 function defaultPrefs(): UserPreferences {
