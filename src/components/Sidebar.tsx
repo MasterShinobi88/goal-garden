@@ -26,10 +26,10 @@ import { cn } from "@/lib/utils";
 import { demoSignOut, isDemoMode } from "@/lib/local-store";
 import { hasPremium } from "@/lib/license";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
-import { BambooTideBrand } from "@/components/BambooTideBrand";
 import {
   CLEANUP_MISSION,
   COMPANY_NAME,
+  COMPANY_URL,
   PREMIUM_PRICE_FULL,
 } from "@/lib/pricing";
 import {
@@ -368,7 +368,23 @@ export function Sidebar({ userLabel }: { userLabel?: string | null }) {
       </nav>
 
       <div className="border-t border-border/80 p-4">
-        <BambooTideBrand variant="compact" className="mb-3 px-1" dark />
+        <a
+          href={COMPANY_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mb-3 flex items-center gap-2.5 rounded-xl border border-border/80 bg-black/10 px-2.5 py-2 transition hover:border-accent/35 hover:bg-accent/10"
+          title="BambooTide home"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/favicon.png"
+            alt=""
+            className="h-7 w-7 shrink-0 rounded-lg"
+            width={28}
+            height={28}
+          />
+          <span className="text-sm font-semibold text-foreground">Go Home</span>
+        </a>
         <p className="mb-3 px-1 text-[10px] leading-snug text-muted/90">
           {CLEANUP_MISSION}
         </p>
