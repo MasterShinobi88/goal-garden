@@ -101,14 +101,20 @@ export function DashboardHero({
   return (
     <section
       className={cn(
-        "relative shrink-0 overflow-hidden rounded-[1.25rem] border border-border",
+        "relative shrink-0 overflow-hidden rounded-[1.25rem] border border-border shadow-sm",
         compact ? "" : ""
       )}
     >
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#0c1524] via-[#0a121c] to-[#071410]" />
-        <div className="absolute -left-16 -top-16 h-56 w-56 rounded-full bg-emerald-500/15 blur-[80px]" />
-        <div className="absolute -right-12 top-0 h-48 w-48 rounded-full bg-sky-500/10 blur-[70px]" />
+        <div className="dashboard-hero-bg absolute inset-0" />
+        <div
+          className="absolute -left-16 -top-16 h-56 w-56 rounded-full blur-[80px]"
+          style={{ background: "var(--hero-glow-a)" }}
+        />
+        <div
+          className="absolute -right-12 top-0 h-48 w-48 rounded-full blur-[70px]"
+          style={{ background: "var(--hero-glow-b)" }}
+        />
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/40 to-transparent" />
       </div>
 
@@ -143,7 +149,7 @@ export function DashboardHero({
               {firstName ? (
                 <>
                   ,{" "}
-                  <span className="bg-gradient-to-r from-emerald-200 to-accent bg-clip-text text-transparent">
+                  <span className="dashboard-hero-name">
                     {firstName}
                   </span>
                 </>
@@ -165,7 +171,7 @@ export function DashboardHero({
               return (
                 <div
                   key={m.label}
-                  className="rounded-xl border border-white/[0.06] bg-white/[0.03] px-2 py-2 sm:px-3 sm:py-2.5"
+                  className="dashboard-hero-metric rounded-xl px-2 py-2 sm:px-3 sm:py-2.5"
                 >
                   <div className="flex items-center gap-1 text-[9px] font-medium uppercase tracking-wider text-muted sm:text-[10px]">
                     <Icon className="h-2.5 w-2.5 text-accent/80 sm:h-3 sm:w-3" />
@@ -293,7 +299,7 @@ export function DashboardHero({
                 />
               </button>
               {demosOpen && (
-                <div className="absolute left-0 z-20 mt-2 w-44 overflow-hidden rounded-xl border border-border bg-[#0e1624] py-1 shadow-2xl">
+                <div className="dashboard-hero-dropdown absolute left-0 z-20 mt-2 w-44 overflow-hidden rounded-xl border border-border py-1 shadow-2xl">
                   <button
                     type="button"
                     className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-white/5"
@@ -324,7 +330,7 @@ export function DashboardHero({
               : "max-w-[200px] sm:max-w-[220px] xl:max-w-[240px]"
           )}
         >
-          <div className="relative rounded-2xl border border-white/[0.07] bg-black/25 p-2 shadow-[0_16px_40px_rgba(0,0,0,0.35)]">
+          <div className="dashboard-hero-panel relative rounded-2xl p-2">
             <ProgressTree
               progress={progress}
               label={treeLabel}
@@ -334,10 +340,10 @@ export function DashboardHero({
               }
             />
             {hasMany && onSelectSapling && (
-              <div className="mt-1 flex items-center justify-between gap-1 border-t border-white/[0.06] px-1 pt-2">
+              <div className="mt-1 flex items-center justify-between gap-1 border-t border-border px-1 pt-2">
                 <button
                   type="button"
-                  className="rounded-lg p-1 text-muted hover:bg-white/5 hover:text-accent"
+                  className="rounded-lg p-1 text-muted hover:bg-foreground/[0.05] hover:text-accent"
                   onClick={goPrev}
                   aria-label="Previous sapling"
                 >
@@ -358,15 +364,20 @@ export function DashboardHero({
                           "h-1.5 rounded-full transition-all",
                           s.id === selectedSaplingId
                             ? "w-4 bg-accent"
-                            : "w-1.5 bg-white/20 hover:bg-white/40"
+                            : "w-1.5 hover:opacity-80"
                         )}
+                        style={
+                          s.id === selectedSaplingId
+                            ? undefined
+                            : { background: "var(--hero-dot)" }
+                        }
                       />
                     ))}
                   </div>
                 </div>
                 <button
                   type="button"
-                  className="rounded-lg p-1 text-muted hover:bg-white/5 hover:text-accent"
+                  className="rounded-lg p-1 text-muted hover:bg-foreground/[0.05] hover:text-accent"
                   onClick={goNext}
                   aria-label="Next sapling"
                 >

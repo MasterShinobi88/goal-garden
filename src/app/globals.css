@@ -38,6 +38,19 @@ html.dark {
   --fc-day-hover: rgba(255, 255, 255, 0.03);
   --fc-weekend: rgba(15, 22, 36, 0.35);
   --scroll-thumb: rgba(71, 85, 105, 0.55);
+  --hero-from: #0c1524;
+  --hero-via: #0a121c;
+  --hero-to: #071410;
+  --hero-metric-border: rgba(255, 255, 255, 0.06);
+  --hero-metric-bg: rgba(255, 255, 255, 0.03);
+  --hero-panel-border: rgba(255, 255, 255, 0.07);
+  --hero-panel-bg: rgba(0, 0, 0, 0.25);
+  --hero-panel-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  --hero-name-from: #a7f3d0;
+  --hero-dropdown: #0e1624;
+  --hero-dot: rgba(255, 255, 255, 0.2);
+  --hero-glow-a: rgba(16, 185, 129, 0.15);
+  --hero-glow-b: rgba(14, 165, 233, 0.1);
 }
 
 /* Light — BambooTide sand + tide green */
@@ -77,6 +90,54 @@ html.light {
   --fc-day-hover: rgba(31, 122, 111, 0.05);
   --fc-weekend: rgba(243, 239, 232, 0.65);
   --scroll-thumb: rgba(31, 122, 111, 0.28);
+  --hero-from: #ffffff;
+  --hero-via: #f7f4ef;
+  --hero-to: #e8f5f2;
+  --hero-metric-border: rgba(15, 51, 47, 0.1);
+  --hero-metric-bg: rgba(255, 255, 255, 0.92);
+  --hero-panel-border: rgba(15, 51, 47, 0.1);
+  --hero-panel-bg: #ffffff;
+  --hero-panel-shadow: 0 12px 32px rgba(15, 51, 47, 0.1);
+  --hero-name-from: #1a6158;
+  --hero-dropdown: #ffffff;
+  --hero-dot: rgba(15, 51, 47, 0.18);
+  --hero-glow-a: rgba(42, 157, 143, 0.16);
+  --hero-glow-b: rgba(168, 224, 212, 0.35);
+}
+
+.dashboard-hero-bg {
+  background: linear-gradient(
+    145deg,
+    var(--hero-from) 0%,
+    var(--hero-via) 48%,
+    var(--hero-to) 100%
+  );
+}
+
+.dashboard-hero-metric {
+  border: 1px solid var(--hero-metric-border);
+  background: var(--hero-metric-bg);
+}
+
+.dashboard-hero-panel {
+  border: 1px solid var(--hero-panel-border);
+  background: var(--hero-panel-bg);
+  box-shadow: var(--hero-panel-shadow);
+}
+
+.dashboard-hero-name {
+  background-image: linear-gradient(
+    90deg,
+    var(--hero-name-from),
+    var(--accent)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.dashboard-hero-dropdown {
+  background: var(--hero-dropdown);
 }
 
 @theme inline {
