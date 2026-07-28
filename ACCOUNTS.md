@@ -5,7 +5,8 @@
 | Mode | When | Data |
 |------|------|------|
 | **Real accounts** | Supabase env set, `DEMO_MODE` false | Auth + goals in Supabase (any device) |
-| **Desktop local** | Electron / `NEXT_PUBLIC_DESKTOP=true` | localStorage on that PC |
+| **Desktop + cloud** | Electron with `DEMO_MODE=false` + Supabase | Same cloud goals as mobile web |
+| **Desktop offline** | `NEXT_PUBLIC_DEMO_MODE=true` or `GOAL_GARDEN_OFFLINE=1` | localStorage on that PC only |
 | **Demo** | `NEXT_PUBLIC_DEMO_MODE=true` only for local testing | Fake local session |
 
 Live Netlify must **not** use demo mode.

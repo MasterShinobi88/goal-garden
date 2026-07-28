@@ -19,6 +19,7 @@ import {
 } from "@/lib/local-store";
 import { isSupabaseEnvConfigured } from "@/lib/runtime-mode";
 import { refreshPremiumFromAccount } from "@/lib/license";
+import { migrateLocalGoalsToCloud } from "@/lib/goals-service";
 import { BambooTideBrand } from "@/components/BambooTideBrand";
 import {
   CLEANUP_MISSION,
@@ -172,6 +173,9 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           }
           // Only if project has confirm email OFF (should not happen in production)
           await refreshPremiumFromAccount();
+          if (data.user?.id) {
+            await migrateLocalGoalsToCloud(data.user.id);
+          }
           router.push("/dashboard");
           router.refresh();
           return;
@@ -209,6 +213,9 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       }
 
       await refreshPremiumFromAccount();
+      if (user?.id) {
+        await migrateLocalGoalsToCloud(user.id);
+      }
       router.push("/dashboard");
       router.refresh();
     } catch (err) {

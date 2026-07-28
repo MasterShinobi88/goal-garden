@@ -15,6 +15,7 @@ import {
   archiveGoal,
   createGoalWithPlan,
   fetchGoals,
+  migrateLocalGoalsToCloud,
   removeGoal,
   seedDemo,
   setMilestoneTitle,
@@ -60,8 +61,8 @@ export function useAuthUser() {
     }
 
     async function load() {
-      // Local demo / desktop only — never invent a user in production mode
-      if (isDemoMode() && (!isSupabaseConfigured() || process.env.NEXT_PUBLIC_DESKTOP === "true")) {
+      // Local demo only (no cloud). Do not invent a user when Supabase accounts are live.
+      if (isDemoMode() && !isSupabaseConfigured()) {
         const s = ensureSessionForDemo();
         if (mounted) {
           setUser({
@@ -94,6 +95,8 @@ export function useAuthUser() {
           setUser(mapUser(data.user));
           await refreshPremiumFromAccount();
           await hydratePrefsForUser(data.user.id);
+          // Desktop/local goals → cloud when account is empty
+          await migrateLocalGoalsToCloud(data.user.id);
         } else {
           // Real accounts: no silent fake user
           setUser(null);
@@ -108,6 +111,7 @@ export function useAuthUser() {
             setUser(mapUser(session.user));
             await refreshPremiumFromAccount();
             await hydratePrefsForUser(session.user.id);
+            await migrateLocalGoalsToCloud(session.user.id);
           } else {
             setUser(null);
             await hydratePrefsForUser(null);
@@ -155,6 +159,8 @@ export function useGoals(userId?: string) {
     setLoading(true);
     setError(null);
     try {
+      // Pull any device-local goals into empty cloud accounts (desktop → mobile)
+      await migrateLocalGoalsToCloud(userId);
       const data = await fetchGoals(userId);
       setGoals(data);
       setStreak(loadStreak().streak);

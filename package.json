@@ -12,9 +12,11 @@
     "build:demo": "cross-env NEXT_PUBLIC_DEMO_MODE=true next build",
     "start": "next start",
     "lint": "eslint",
-    "desktop": "concurrently -k \"cross-env NEXT_PUBLIC_DESKTOP=true NEXT_PUBLIC_DEMO_MODE=true next dev -p 3000\" \"wait-on http://127.0.0.1:3000 && cross-env GOAL_GARDEN_DEV_URL=http://127.0.0.1:3000 electron .\"",
-    "desktop:build": "cross-env NEXT_OUTPUT=standalone NEXT_PUBLIC_DESKTOP=true NEXT_PUBLIC_DEMO_MODE=true next build && node scripts/prepare-standalone.cjs && electron-builder --win",
-    "desktop:dir": "cross-env NEXT_OUTPUT=standalone NEXT_PUBLIC_DESKTOP=true NEXT_PUBLIC_DEMO_MODE=true next build && node scripts/prepare-standalone.cjs && electron-builder --win --dir"
+    "desktop": "concurrently -k \"cross-env NEXT_PUBLIC_DESKTOP=true NEXT_PUBLIC_DEMO_MODE=false next dev -p 3000\" \"wait-on http://127.0.0.1:3000 && cross-env GOAL_GARDEN_DEV_URL=http://127.0.0.1:3000 electron .\"",
+    "desktop:offline": "concurrently -k \"cross-env NEXT_PUBLIC_DESKTOP=true NEXT_PUBLIC_DEMO_MODE=true next dev -p 3000\" \"wait-on http://127.0.0.1:3000 && cross-env GOAL_GARDEN_DEV_URL=http://127.0.0.1:3000 electron .\"",
+    "desktop:build": "cross-env NEXT_OUTPUT=standalone NEXT_PUBLIC_DESKTOP=true NEXT_PUBLIC_DEMO_MODE=false next build && node scripts/prepare-standalone.cjs && electron-builder --win",
+    "desktop:build:offline": "cross-env NEXT_OUTPUT=standalone NEXT_PUBLIC_DESKTOP=true NEXT_PUBLIC_DEMO_MODE=true next build && node scripts/prepare-standalone.cjs && electron-builder --win",
+    "desktop:dir": "cross-env NEXT_OUTPUT=standalone NEXT_PUBLIC_DESKTOP=true NEXT_PUBLIC_DEMO_MODE=false next build && node scripts/prepare-standalone.cjs && electron-builder --win --dir"
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.21",

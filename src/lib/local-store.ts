@@ -44,12 +44,10 @@ export {
 
 /**
  * Demo mode = local-only fake accounts (NOT for production web).
- * Re-exports env check + desktop window bridge.
+ * Desktop Electron can still use cloud when DEMO_MODE is false + Supabase is set.
+ * `window.goalGarden.isDesktop` alone must NOT force offline demo.
  */
 export function isDemoMode() {
-  if (typeof window !== "undefined" && window.goalGarden?.isDesktop) {
-    return true;
-  }
   return isDemoModeEnv();
 }
 

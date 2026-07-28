@@ -1,6 +1,7 @@
 "use client";
 
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { isDemoMode, usesCloudData } from "@/lib/runtime-mode";
 import type { GeneratedPlan, GoalWithTree } from "@/lib/types";
 import {
   deleteGoal as localDelete,
@@ -16,8 +17,13 @@ import {
 } from "@/lib/local-store";
 import { autoCompleteMilestones } from "@/lib/utils";
 
+/** Cloud when Supabase is configured and we are not in local-only demo mode. */
+function cloudOn(): boolean {
+  return usesCloudData() && isSupabaseConfigured() && !isDemoMode();
+}
+
 export async function fetchGoals(userId: string): Promise<GoalWithTree[]> {
-  if (!isSupabaseConfigured()) {
+  if (!cloudOn()) {
     return loadGoals();
   }
 
@@ -28,13 +34,15 @@ export async function fetchGoals(userId: string): Promise<GoalWithTree[]> {
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
-  if (error || !goals) {
-    console.error(error);
-    return loadGoals();
+  if (error) {
+    console.error("[goals] fetch failed", error);
+    throw new Error(
+      error.message || "Could not load goals from your account. Check your connection."
+    );
   }
 
   const result: GoalWithTree[] = [];
-  for (const g of goals) {
+  for (const g of goals ?? []) {
     const { data: milestones } = await supabase
       .from("milestones")
       .select("*")
@@ -55,6 +63,100 @@ export async function fetchGoals(userId: string): Promise<GoalWithTree[]> {
   // cache locally for offline UI snappiness
   saveGoals(result);
   return result;
+}
+
+async function insertGoalTree(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  goal: GoalWithTree
+): Promise<GoalWithTree> {
+  const { data: inserted, error } = await supabase
+    .from("goals")
+    .insert({
+      user_id: userId,
+      title: goal.title,
+      description: goal.description,
+      deadline: goal.deadline,
+      success_metrics: goal.success_metrics,
+      archived: goal.archived ?? false,
+      category: goal.category ?? "general",
+      health_profile: goal.health_profile ?? null,
+      health_plan: goal.health_plan ?? null,
+      savings_profile: goal.savings_profile ?? null,
+      savings_plan: goal.savings_plan ?? null,
+      earning_profile: goal.earning_profile ?? null,
+      earning_plan: goal.earning_plan ?? null,
+      plant_type: goal.plant_type ?? "oak",
+    })
+    .select()
+    .single();
+
+  if (error || !inserted) {
+    console.error("[goals] insert failed", error);
+    throw new Error(
+      error?.message ||
+        "Could not save goal to your account. Stay signed in and try again."
+    );
+  }
+
+  const next: GoalWithTree = {
+    ...goal,
+    id: inserted.id,
+    user_id: userId,
+    milestones: [],
+  };
+
+  for (const m of goal.milestones) {
+    const { data: midRow, error: mErr } = await supabase
+      .from("milestones")
+      .insert({
+        goal_id: inserted.id,
+        title: m.title,
+        target_date: m.target_date,
+        completed: m.completed ?? false,
+        sort_order: m.sort_order,
+      })
+      .select()
+      .single();
+    if (mErr || !midRow) {
+      console.error("[goals] milestone insert failed", mErr);
+      continue;
+    }
+    const tasks = [];
+    for (const t of m.daily_tasks) {
+      const { data: tRow, error: tErr } = await supabase
+        .from("daily_tasks")
+        .insert({
+          milestone_id: midRow.id,
+          title: t.title,
+          scheduled_date: t.scheduled_date,
+          completed: t.completed ?? false,
+          notes: t.notes,
+          sort_order: t.sort_order,
+        })
+        .select()
+        .single();
+      if (tErr) {
+        console.error("[goals] task insert failed", tErr);
+        continue;
+      }
+      if (tRow) {
+        tasks.push({
+          ...t,
+          id: tRow.id,
+          milestone_id: midRow.id,
+        });
+      }
+    }
+    next.milestones.push({
+      ...m,
+      id: midRow.id,
+      goal_id: inserted.id,
+      daily_tasks: tasks,
+    });
+  }
+
+  return next;
 }
 
 export async function createGoalWithPlan(
@@ -124,78 +226,19 @@ export async function createGoalWithPlan(
   };
   goal.milestones = goal.milestones.map((m) => ({ ...m, goal_id: goal.id }));
 
-  if (!isSupabaseConfigured()) {
+  if (!cloudOn()) {
     localUpsert(goal);
     return goal;
   }
 
   const supabase = createClient();
-  const { data: inserted, error } = await supabase
-    .from("goals")
-    .insert({
-      user_id: userId,
-      title: goal.title,
-      description: goal.description,
-      deadline: goal.deadline,
-      success_metrics: goal.success_metrics,
-      category: goal.category ?? "general",
-      health_profile: goal.health_profile ?? null,
-      health_plan: goal.health_plan ?? null,
-      savings_profile: goal.savings_profile ?? null,
-      savings_plan: goal.savings_plan ?? null,
-      earning_profile: goal.earning_profile ?? null,
-      earning_plan: goal.earning_plan ?? null,
-      plant_type: goal.plant_type ?? "oak",
-    })
-    .select()
-    .single();
-
-  if (error || !inserted) {
-    console.error(error);
-    localUpsert(goal);
-    return goal;
-  }
-
-  goal.id = inserted.id;
-  for (const m of goal.milestones) {
-    m.goal_id = inserted.id;
-    const { data: midRow, error: mErr } = await supabase
-      .from("milestones")
-      .insert({
-        goal_id: inserted.id,
-        title: m.title,
-        target_date: m.target_date,
-        completed: false,
-        sort_order: m.sort_order,
-      })
-      .select()
-      .single();
-    if (mErr || !midRow) continue;
-    m.id = midRow.id;
-    for (const t of m.daily_tasks) {
-      t.milestone_id = midRow.id;
-      const { data: tRow } = await supabase
-        .from("daily_tasks")
-        .insert({
-          milestone_id: midRow.id,
-          title: t.title,
-          scheduled_date: t.scheduled_date,
-          completed: false,
-          notes: t.notes,
-          sort_order: t.sort_order,
-        })
-        .select()
-        .single();
-      if (tRow) t.id = tRow.id;
-    }
-  }
-
-  localUpsert(goal);
-  return goal;
+  const saved = await insertGoalTree(supabase, userId, goal);
+  localUpsert(saved);
+  return saved;
 }
 
 export async function setTaskCompleted(taskId: string, completed: boolean) {
-  if (!isSupabaseConfigured()) {
+  if (!cloudOn()) {
     const next = localToggle(taskId, completed);
     if (completed && typeof window !== "undefined") {
       const { fireCelebration } = await import("@/components/Celebration");
@@ -207,7 +250,16 @@ export async function setTaskCompleted(taskId: string, completed: boolean) {
     return next;
   }
   const supabase = createClient();
-  await supabase.from("daily_tasks").update({ completed }).eq("id", taskId);
+  const { error } = await supabase
+    .from("daily_tasks")
+    .update({ completed })
+    .eq("id", taskId);
+  if (error) {
+    console.error("[goals] task complete failed", error);
+    throw new Error(
+      error.message || "Could not save task progress to your account."
+    );
+  }
   const next = localToggle(taskId, completed);
   if (completed && typeof window !== "undefined") {
     const { fireCelebration } = await import("@/components/Celebration");
@@ -220,26 +272,35 @@ export async function setTaskCompleted(taskId: string, completed: boolean) {
 }
 
 export async function setTaskTitle(taskId: string, title: string) {
-  if (!isSupabaseConfigured()) return localTaskTitle(taskId, title);
+  if (!cloudOn()) return localTaskTitle(taskId, title);
   const supabase = createClient();
-  await supabase.from("daily_tasks").update({ title }).eq("id", taskId);
+  const { error } = await supabase
+    .from("daily_tasks")
+    .update({ title })
+    .eq("id", taskId);
+  if (error) throw new Error(error.message || "Could not rename task.");
   return localTaskTitle(taskId, title);
 }
 
 export async function setMilestoneTitle(milestoneId: string, title: string) {
-  if (!isSupabaseConfigured()) return localMilestoneTitle(milestoneId, title);
+  if (!cloudOn()) return localMilestoneTitle(milestoneId, title);
   const supabase = createClient();
-  await supabase.from("milestones").update({ title }).eq("id", milestoneId);
+  const { error } = await supabase
+    .from("milestones")
+    .update({ title })
+    .eq("id", milestoneId);
+  if (error) throw new Error(error.message || "Could not rename milestone.");
   return localMilestoneTitle(milestoneId, title);
 }
 
 export async function setTaskDate(taskId: string, scheduled_date: string) {
-  if (!isSupabaseConfigured()) return localReschedule(taskId, scheduled_date);
+  if (!cloudOn()) return localReschedule(taskId, scheduled_date);
   const supabase = createClient();
-  await supabase
+  const { error } = await supabase
     .from("daily_tasks")
     .update({ scheduled_date })
     .eq("id", taskId);
+  if (error) throw new Error(error.message || "Could not reschedule task.");
   return localReschedule(taskId, scheduled_date);
 }
 
@@ -250,17 +311,25 @@ export async function archiveGoal(goalId: string, archived = true) {
       : g
   );
   saveGoals(goals);
-  if (isSupabaseConfigured()) {
+  if (cloudOn()) {
     const supabase = createClient();
-    await supabase.from("goals").update({ archived }).eq("id", goalId);
+    const { error } = await supabase
+      .from("goals")
+      .update({ archived })
+      .eq("id", goalId);
+    if (error) {
+      console.error("[goals] archive failed", error);
+      throw new Error(error.message || "Could not update goal on your account.");
+    }
   }
   return goals;
 }
 
 export async function removeGoal(goalId: string) {
-  if (!isSupabaseConfigured()) return localDelete(goalId);
+  if (!cloudOn()) return localDelete(goalId);
   const supabase = createClient();
-  await supabase.from("goals").delete().eq("id", goalId);
+  const { error } = await supabase.from("goals").delete().eq("id", goalId);
+  if (error) throw new Error(error.message || "Could not delete goal.");
   return localDelete(goalId);
 }
 
@@ -277,4 +346,86 @@ export function syncMilestones(goals: GoalWithTree[]) {
     ...g,
     milestones: autoCompleteMilestones(g.milestones),
   }));
+}
+
+const MIGRATE_FLAG = "goal-garden:local-goals-migrated:";
+
+/**
+ * One-time: upload goals that only exist in this browser/device localStorage
+ * into the signed-in account when the cloud account is still empty.
+ * Fixes desktop-offline → mobile sign-in empty garden.
+ */
+export async function migrateLocalGoalsToCloud(
+  userId: string
+): Promise<{ uploaded: number; skipped: boolean; reason?: string }> {
+  if (!cloudOn() || !userId) {
+    return { uploaded: 0, skipped: true, reason: "cloud_off" };
+  }
+
+  try {
+    if (localStorage.getItem(MIGRATE_FLAG + userId) === "1") {
+      return { uploaded: 0, skipped: true, reason: "already_done" };
+    }
+  } catch {
+    /* ignore */
+  }
+
+  const local = loadGoals().filter((g) => g && g.title);
+  if (!local.length) {
+    try {
+      localStorage.setItem(MIGRATE_FLAG + userId, "1");
+    } catch {
+      /* ignore */
+    }
+    return { uploaded: 0, skipped: true, reason: "no_local" };
+  }
+
+  const supabase = createClient();
+  const { data: existing, error } = await supabase
+    .from("goals")
+    .select("id")
+    .eq("user_id", userId)
+    .limit(1);
+
+  if (error) {
+    console.error("[goals] migrate check failed", error);
+    return { uploaded: 0, skipped: true, reason: "check_failed" };
+  }
+
+  // Don't overwrite an account that already has goals
+  if (existing && existing.length > 0) {
+    try {
+      localStorage.setItem(MIGRATE_FLAG + userId, "1");
+    } catch {
+      /* ignore */
+    }
+    return { uploaded: 0, skipped: true, reason: "cloud_has_goals" };
+  }
+
+  let uploaded = 0;
+  for (const g of local) {
+    try {
+      const owned = { ...g, user_id: userId };
+      const saved = await insertGoalTree(supabase, userId, owned);
+      localUpsert(saved);
+      uploaded += 1;
+    } catch (e) {
+      console.error("[goals] migrate one failed", e);
+    }
+  }
+
+  try {
+    localStorage.setItem(MIGRATE_FLAG + userId, "1");
+  } catch {
+    /* ignore */
+  }
+
+  // Refresh full tree from cloud
+  try {
+    await fetchGoals(userId);
+  } catch {
+    /* ignore */
+  }
+
+  return { uploaded, skipped: false };
 }

@@ -69,13 +69,16 @@ function startNextServer() {
     // Pick a free-ish port in a fixed range for desktop
     serverPort = 3911 + Math.floor(Math.random() * 80);
 
+    // Cloud sync: DEMO_MODE false so signed-in users share goals with mobile web.
+    // Offline-only installers can set GOAL_GARDEN_OFFLINE=1 at package time.
+    const offlineOnly = process.env.GOAL_GARDEN_OFFLINE === "1";
     const env = {
       ...process.env,
       NODE_ENV: "production",
       PORT: String(serverPort),
       HOSTNAME: "127.0.0.1",
       NEXT_PUBLIC_DESKTOP: "true",
-      NEXT_PUBLIC_DEMO_MODE: "true",
+      NEXT_PUBLIC_DEMO_MODE: offlineOnly ? "true" : "false",
     };
 
     nextServerLogs = "";
